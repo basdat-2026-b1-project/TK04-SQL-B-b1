@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Redeem Hadiah{% endblock %}
+
+{% block content %}
+<!-- Container Utama: mx-auto berfungsi untuk mengetengahkan konten -->
+<div class="max-w-7xl mx-auto px-6 md:px-10 pt-10 pb-20">
+    
+    <!-- Header Section -->
+    <div class="mb-10 text-center sm:text-left">
+        <h1 class="text-4xl font-marcellus text-[#0A1D37] tracking-wider">Redeem Hadiah</h1>
+        <p class="text-gray-500 font-inter-semibold mt-2 text-xs uppercase tracking-[0.2em]">
+            Award Miles tersedia: <span class="text-gray-900 ml-1">{{ request.session.award_miles|default:"100,000"|intcomma }}</span>
+        </p>
+    </div>
+
+    <!-- Alert Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="mb-6 p-4 rounded-xl {% if message.tags == 'error' %}bg-red-50 text-red-700 border-red-100{% else %}bg-green-50 text-green-700 border-green-100{% endif %} border font-inter-semibold text-xs">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Tab Navigation -->
+    <div class="inline-flex bg-[#E2E4E7] p-1 rounded-xl mb-10 font-inter-semibold text-[11px]">
+        <button onclick="switchTab('katalog')" id="btn-katalog" 
+            class="px-6 py-2 transition-all rounded-lg {% if active_tab != 'riwayat' %}bg-white text-[#0A1D37] shadow-sm{% else %}text-gray-500{% endif %}">
+            Katalog Hadiah
+        </button>
+        <button onclick="switchTab('riwayat')" id="btn-riwayat" 
+            class="px-6 py-2 transition-all rounded-lg {% if active_tab == 'riwayat' %}bg-white text-[#0A1D37] shadow-sm{% else %}text-gray-500{% endif %}">
+            Riwayat Redeem
+        </button>
+    </div>
+
+    <!-- Katalog Section -->
+    <div id="section-katalog" class="{% if active_tab == 'riwayat' %}hidden{% endif %}">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {% for h in hadiah_list %}
+            <div class="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100 flex flex-col items-start relative overflow-hidden">
+                <span class="px-4 py-1.5 rounded-lg text-white text-[10px] font-inter-semibold mb-4 uppercase tracking-widest bg-[#A69C6D]">
+                    {{ h.kode }} - {{ h.penyedia }}
+                </span>
+                <h3 class="text-xl font-marcellus text-[#0A1D37] mb-1">{{ h.nama }}</h3>
+                <p class="text-[#0A1D37] font-inter-semibold text-sm mb-2">{{ h.miles|intcomma }} miles</p>
+                <p class="text-gray-400 text-xs font-medium mb-8 italic leading-relaxed">{{ h.deskripsi }}</p>
+                <button onclick="bukaModalRedeem('{{ h.kode }}', '{{ h.nama }}', '{{ h.miles }}', '{{ h.penyedia }}')" 
+                    class="bg-[#0A1D37] text-white px-8 py-2.5 rounded-xl text-xs font-inter-semibold hover:bg-black transition-all uppercase tracking-widest">
+                    REDEEM
+                </button>
+            </div>
+            {% empty %}
+            <p class="text-gray-400 italic">Tidak ada produk dalam katalog.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Riwayat Section -->
+    <div id="section-riwayat" class="{% if active_tab != 'riwayat' %}hidden{% endif %}">
+        <div class="bg-white rounded-[24px] border border-gray-100 p-8 shadow-sm overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="text-[11px] font-inter-semibold text-gray-400 uppercase tracking-widest border-b border-gray-50">
+                    <tr>
+                        <th class="px-4 py-5">Hadiah</th>
+                        <th class="px-4 py-5">Waktu</th>
+                        <th class="px-4 py-5 text-center">Miles</th>
+                        <th class="px-4 py-5 text-right w-24">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    {% for r in riwayat_redeem %}
+                    <tr class="hover:bg-gray-50/50 transition-colors">
+                        <td class="px-4 py-6 font-inter-semibold text-gray-900 text-sm">{{ r.hadiah }}</td>
+                        <td class="px-4 py-6 text-sm text-gray-400">{{ r.timestamp }}</td>
+                        <td class="px-4 py-6 text-sm font-bold text-red-500 text-center">
+                            -{{ r.miles|intcomma }}
+                        </td>
+                        <td class="px-4 py-6 text-right">
+                            <svg class="w-5 h-5 ml-auto text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="py-20 text-center text-gray-400 font-inter-semibold text-sm italic">
+                            Belum ada riwayat penukaran.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div> <!-- Penutup container utama -->
+
+<!-- Modal Redeem (Fixed Position) -->
+<div id="modalRedeem" class="fixed inset-0 bg-gray-900/60 z-[9999] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-[32px] p-10 max-w-lg w-full shadow-2xl relative">
+        <h2 class="text-2xl font-marcellus text-[#0A1D37] mb-4">Konfirmasi Redeem</h2>
+        <p id="modal-text" class="text-gray-600 text-sm mb-10 leading-relaxed"></p>
+
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="kode_hadiah" id="input_kode_hadiah">
+            <div class="flex justify-end gap-3 font-inter-semibold">
+                <button type="button" onclick="tutupModalRedeem()" class="px-8 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-xs hover:bg-gray-50">Batal</button>
+                <button type="submit" class="px-8 py-2.5 rounded-xl bg-[#0A1D37] text-white text-xs hover:bg-black transition-all shadow-lg uppercase">Redeem Sekarang</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+    function switchTab(tab) {
+        const kat = document.getElementById('section-katalog');
+        const riw = document.getElementById('section-riwayat');
+        const btnK = document.getElementById('btn-katalog');
+        const btnR = document.getElementById('btn-riwayat');
+
+        if(tab === 'katalog') {
+            kat.classList.remove('hidden'); 
+            riw.classList.add('hidden');
+            btnK.classList.add('bg-white', 'text-[#0A1D37]', 'shadow-sm');
+            btnK.classList.remove('text-gray-500');
+            btnR.classList.remove('bg-white', 'text-[#0A1D37]', 'shadow-sm');
+            btnR.classList.add('text-gray-500');
+        } else {
+            riw.classList.remove('hidden'); 
+            kat.classList.add('hidden');
+            btnR.classList.add('bg-white', 'text-[#0A1D37]', 'shadow-sm');
+            btnR.classList.remove('text-gray-500');
+            btnK.classList.remove('bg-white', 'text-[#0A1D37]', 'shadow-sm');
+            btnK.classList.add('text-gray-500');
+        }
+    }
+
+    function bukaModalRedeem(kode, nama, miles, penyedia) {
+        document.getElementById('input_kode_hadiah').value = kode;
+        document.getElementById('modal-text').innerHTML = `Anda akan menukarkan <b>${Number(miles).toLocaleString()} miles</b> untuk mendapatkan <b>${nama}</b> dari ${penyedia}. Konfirmasi penukaran?`;
+        document.getElementById('modalRedeem').classList.remove('hidden');
+        document.getElementById('modalRedeem').classList.add('flex');
+    }
+
+    function tutupModalRedeem() {
+        document.getElementById('modalRedeem').classList.add('hidden');
+        document.getElementById('modalRedeem').classList.remove('flex');
+    }
+</script>
+{% endblock extra_js %}

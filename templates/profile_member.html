@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<section class="min-h-[calc(100vh-104px)] bg-cover bg-center px-6 py-10"
+    style="background-image: linear-gradient(rgba(240, 244, 248, 0.7), rgba(240, 244, 248, 0.7)), url('{% static "img/image-2.png" %}');">
+
+    <div class="max-w-5xl mx-auto relative z-10">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold font-marcellus text-gray-900 tracking-wider">
+                Pengaturan Profil Member
+            </h1>
+        </div>
+
+        <div class="flex justify-start mb-6">
+            <a href="{% url 'member:identitas' %}"
+                class="inline-flex items-center gap-2 bg-[#1a2b49] text-white px-6 py-3 rounded-xl hover:bg-[#121e33] transition font-inter font-semibold shadow-sm">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"></path></svg>
+                Kelola Dokumen Identitas
+            </a>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-[24px] shadow-sm p-10">
+            <form method="POST" action="/update-profile/">
+                {% csrf_token %}
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                    <div class="md:col-span-2 max-w-2xl">
+                        <label class="block mb-2 text-sm font-semibold text-gray-700 font-inter">Email</label>
+                        <input type="email" value="{{ email }}" readonly placeholder="nisrina.alya@ui.ac.id"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50 text-gray-500 focus:outline-none font-inter cursor-not-allowed">
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-semibold text-gray-700 font-inter">Nomor Member</label>
+                        <input type="text" value="{{ nomor_member }}" readonly placeholder="MOO01"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50 text-gray-500 focus:outline-none font-inter cursor-not-allowed">
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-semibold text-gray-700 font-inter">Tanggal Bergabung</label>
+                        <input type="text" value="{{ tanggal_bergabung }}" readonly placeholder="19-09-2024"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-50 text-gray-500 focus:outline-none font-inter cursor-not-allowed">
+                    </div>
+
+                    <div class="md:col-span-2 max-w-2xl">
+                        <label class="block mb-2 text-sm font-semibold text-gray-700 font-inter">Salutation</label>
+                        <select name="salutation"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#1a2b49] font-inter text-gray-800 cursor-pointer">
+                            <option value="">Pilih Salutation</option>
+                            <option value="Mr." {% if salutation == "Mr." %}selected{% endif %}>Mr.</option>
+                            <option value="Mrs." {% if salutation == "Mrs." %}selected{% endif %}>Mrs.</option>
+                            <option value="Ms." {% if salutation == "Ms." %}selected{% endif %}>Ms.</option>
+                            <option value="Dr." {% if salutation == "Dr." %}selected{% endif %}>Dr.</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-semibold text-gray-700 font-inter">Nama Depan</label>
+                        <input type="text" name="first_mid_name" value="{{ first_mid_name }}" placeholder="Nisrina"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#1a2b49] font-inter text-gray-800">
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-semibold text-gray-700 font-inter">Nama Belakang</label>
+                        <input type="text" name="last_name" value="{{ last_name }}" placeholder="Alya"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#1a2b49] font-inter text-gray-800">
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-semibold text-gray-700 font-inter">Kewarganegaraan</label>
+                        <input type="text" name="kewarganegaraan" value="{{ kewarganegaraan }}" placeholder="Indonesia"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#1a2b49] font-inter text-gray-800">
+                    </div>
+
+                    <div class="hidden md:block"></div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-semibold text-gray-700 font-inter">Country Code</label>
+                        <input type="text" name="country_code" value="{{ country_code }}" placeholder="+62"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#1a2b49] font-inter text-gray-800">
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-semibold text-gray-700 font-inter">Nomor Telepon</label>
+                        <input type="text" name="mobile_number" value="{{ mobile_number }}" placeholder="81370998516"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#1a2b49] font-inter text-gray-800">
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 text-sm font-semibold text-gray-700 font-inter">Tanggal Lahir</label>
+                        <input type="date" name="tanggal_lahir" value="{{ tanggal_lahir }}"
+                            class="w-full md:w-auto px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#1a2b49] font-inter text-gray-800">
+                    </div>
+                </div>
+
+                <div class="flex justify-center mt-10">
+                    <button type="submit"
+                        class="w-full md:w-[586px] bg-[#1a2b49] text-white py-3.5 rounded-xl font-bold font-inter hover:bg-[#121e33] transition shadow-md">
+                        Simpan Perubahan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

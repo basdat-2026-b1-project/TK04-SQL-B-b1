@@ -1,0 +1,33 @@
+:root {
+  --primary: #0B3C5D;
+  --accent: #00A8E8;
+  --background: #F5F7FA;
+  --text: #1F2937;
+
+  --success: #10B981;
+  --danger: #EF4444;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.bg-aero-primary {
+  background-color: var(--primary) !important;
+}
+
+.btn-aero-accent {
+  background-color: var(--accent);
+  color: #ffffff;
+  border: none;
+  font-weight: 600;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-aero-accent:hover {
+  background-color: #008ac0;
+  color: #ffffff;
+  transform: translateY(-1px);
+}

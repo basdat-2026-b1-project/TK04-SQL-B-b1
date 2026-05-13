@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Judul Halaman Sesuai File{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 md:px-10 pt-10 pb-10"> 
+    
+    <h1 class="text-4xl font-marcellus text-[#0A1D37] mb-10 tracking-wide">Info Tier</h1>
+
+    {% if next_tier %}
+    <div class="bg-white rounded-[32px] border border-gray-100 p-10 shadow-sm mb-12 relative overflow-hidden">
+        <div class="flex justify-between items-end mb-6">
+            <div>
+                <p class="text-[10px] text-gray-400 font-inter-semibold uppercase tracking-[0.2em] mb-1">Status Progress</p>
+                <p class="text-lg font-inter-semibold text-[#0A1D37]">
+                    Ke Tier <span class="text-[#A69C6D]">{{ next_tier.nama }}</span>
+                </p>
+            </div>
+            <div class="text-right">
+                <span class="text-2xl font-marcellus text-[#0A1D37]">{{ total_miles|intcomma }}</span>
+                <span class="text-xs text-gray-400 font-inter-semibold ml-1">/ {{ next_tier.min_miles|intcomma }} MILES</span>
+            </div>
+        </div>
+        
+        <div class="w-full bg-gray-100 h-3 rounded-full overflow-hidden">
+            <div class="bg-[#0A1D37] h-full transition-all duration-1000" 
+                style="width: {{ progress_pct }}%">
+            </div>
+        </div>
+        
+        <p class="text-[10px] text-gray-400 mt-4 italic">
+            *Kumpulkan {{ next_tier.min_miles|intcomma }} miles kumulatif untuk naik ke tier {{ next_tier.nama }}.
+        </p>
+    </div>
+    {% else %}
+    <div class="bg-[#0A1D37] rounded-[32px] p-10 mb-12 text-center">
+        <p class="text-[#A69C6D] font-marcellus text-xl mb-1">Selamat!</p>
+        <p class="text-white font-inter-semibold text-sm">Anda telah mencapai Tier tertinggi (Platinum)</p>
+    </div>
+    {% endif %}
+
+    <div class="space-y-8">
+        {% for t in tiers %}
+        <div class="relative bg-white rounded-[32px] border-2 p-8 transition-all duration-300
+            {% if t.nama == current_tier %} border-[#A69C6D] shadow-xl scale-[1.02] z-10 {% else %} border-gray-50 shadow-sm opacity-80 {% endif %}">
+            
+            {% if t.nama == current_tier %}
+            <div class="absolute -top-4 left-8 bg-[#A69C6D] text-white text-[10px] font-inter-semibold px-4 py-1.5 rounded-full uppercase tracking-widest shadow-lg">
+                Tier Anda Saat Ini
+            </div>
+            {% endif %}
+
+            <div class="flex flex-col md:flex-row gap-8">
+                <div class="w-20 h-20 rounded-[24px] flex items-center justify-center shrink-0 shadow-inner
+                    {% if t.nama == 'Blue' %} bg-blue-50 text-blue-500 
+                    {% elif t.nama == 'Silver' %} bg-slate-100 text-slate-400 
+                    {% elif t.nama == 'Gold' %} bg-[#FAF1E6] text-[#A69C6D] 
+                    {% else %} bg-[#111827] text-white {% endif %}">
+                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z"></path>
+                    </svg>
+                </div>
+
+                <div class="flex-1">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-3xl font-marcellus text-[#0A1D37] tracking-wider">{{ t.nama }}</h3>
+                        <span class="text-[10px] font-inter-semibold text-gray-400 uppercase tracking-widest bg-gray-50 px-3 py-1 rounded-lg">
+                            {{ t.id }}
+                        </span>
+                    </div>
+                    
+                    <p class="text-[11px] font-inter-semibold text-gray-400 mb-8 uppercase tracking-widest">
+                        Min. {{ t.min_frekuensi }} Penerbangan  ·  Min. {{ t.min_miles|intcomma }} Miles
+                    </p>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {% for benefit in t.keuntungan %}
+                        <div class="flex items-start gap-3 group">
+                            <div class="mt-1 bg-green-50 rounded-full p-0.5">
+                                <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path>
+                                </svg>
+                            </div>
+                            <span class="text-sm text-gray-600 leading-tight group-hover:text-gray-900 transition-colors">{{ benefit }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div> {% endblock content %}

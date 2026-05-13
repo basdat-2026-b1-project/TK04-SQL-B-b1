@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-semibold text-black">Dokumen Identitas Saya</h1>
+
+        <button type="button"
+                onclick="openModal('modalTambah')"
+                class="flex items-center gap-3 bg-white border border-gray-300 rounded-xl px-6 py-3 shadow-md hover:bg-gray-100 transition font-semibold">
+            <span class="text-2xl leading-none">+</span>
+            Tambah Identitas
+        </button>
+    </div>
+
+    {% if messages %}
+        <div class="mb-5 space-y-2">
+            {% for message in messages %}
+                <div class="px-4 py-3 rounded-lg
+                    {% if message.tags == 'error' %}
+                        bg-red-100 text-red-700
+                    {% else %}
+                        bg-green-100 text-green-700
+                    {% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="bg-white border border-gray-300 rounded-2xl shadow-md px-10 py-8 min-h-[420px]">
+        <table class="w-full text-center border-collapse">
+            <thead>
+                <tr class="text-gray-600 border-b border-gray-300">
+                    <th class="py-5 font-semibold">Nomor Dokumen</th>
+                    <th class="py-5 font-semibold">Jenis</th>
+                    <th class="py-5 font-semibold">Negara Penerbit</th>
+                    <th class="py-5 font-semibold">Tanggal Terbit</th>
+                    <th class="py-5 font-semibold">Tanggal Habis</th>
+                    <th class="py-5 font-semibold">Status</th>
+                    <th class="py-5 font-semibold">Aksi</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for identitas in identitas_list %}
+                <tr class="border-b border-gray-300 text-gray-700">
+                    <td class="py-5">{{ identitas.nomor }}</td>
+                    <td class="py-5">{{ identitas.jenis }}</td>
+                    <td class="py-5">{{ identitas.negara }}</td>
+                    <td class="py-5">{{ identitas.tanggal_terbit }}</td>
+                    <td class="py-5">{{ identitas.tanggal_habis }}</td>
+                    <td class="py-5">
+                        {% if identitas.status == "Aktif" %}
+                            <span class="px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm">
+                                Aktif
+                            </span>
+                        {% else %}
+                            <span class="px-3 py-1 rounded-full bg-red-100 text-red-700 text-sm">
+                                Kedaluwarsa
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="py-5">
+                        <div class="flex justify-center gap-3">
+                            <button type="button"
+                                    onclick="openModal('modalEdit{{ forloop.counter }}')"
+                                    class="text-blue-600 hover:text-blue-800 text-xl">
+                                ✎
+                            </button>
+
+                            <button type="button"
+                                    onclick="openModal('modalHapus{{ forloop.counter }}')"
+                                    class="text-red-600 hover:text-red-800 text-xl">
+                                🗑
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+
+                <div id="modalEdit{{ forloop.counter }}"
+                     class="hidden fixed inset-0 bg-black/50 z-[9999] items-center justify-center px-4">
+
+                    <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl p-8">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-semibold">Edit Identitas</h2>
+                            <button type="button"
+                                    onclick="closeModal('modalEdit{{ forloop.counter }}')"
+                                    class="text-2xl">
+                                ×
+                            </button>
+                        </div>
+
+                        <form method="POST" action="{% url 'member:identitas' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="edit">
+                            <input type="hidden" name="nomor" value="{{ identitas.nomor }}">
+
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block mb-1 text-sm font-semibold">Nomor Dokumen</label>
+                                    <input type="text" value="{{ identitas.nomor }}" readonly
+                                           class="w-full px-4 py-3 border rounded-lg bg-gray-100">
+                                </div>
+
+                                <div>
+                                    <label class="block mb-1 text-sm font-semibold">Jenis</label>
+                                    <select name="jenis" class="w-full px-4 py-3 border rounded-lg">
+                                        <option value="Paspor" {% if identitas.jenis == "Paspor" %}selected{% endif %}>Paspor</option>
+                                        <option value="KTP" {% if identitas.jenis == "KTP" %}selected{% endif %}>KTP</option>
+                                        <option value="SIM" {% if identitas.jenis == "SIM" %}selected{% endif %}>SIM</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block mb-1 text-sm font-semibold">Negara Penerbit</label>
+                                    <input type="text" name="negara" value="{{ identitas.negara }}"
+                                           class="w-full px-4 py-3 border rounded-lg">
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block mb-1 text-sm font-semibold">Tanggal Terbit</label>
+                                        <input type="date" name="tanggal_terbit" value="{{ identitas.tanggal_terbit }}"
+                                               class="w-full px-4 py-3 border rounded-lg">
+                                    </div>
+
+                                    <div>
+                                        <label class="block mb-1 text-sm font-semibold">Tanggal Habis</label>
+                                        <input type="date" name="tanggal_habis" value="{{ identitas.tanggal_habis }}"
+                                               class="w-full px-4 py-3 border rounded-lg">
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block mb-1 text-sm font-semibold">Status</label>
+                                    {% if identitas.status == "Aktif" %}
+                                        <span class="bg-green-100 text-green-700">Aktif</span>
+                                    {% else %}
+                                        <span class="bg-red-100 text-red-700">Kedaluwarsa</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end gap-3 mt-8">
+                                <button type="button"
+                                        onclick="closeModal('modalEdit{{ forloop.counter }}')"
+                                        class="px-6 py-3 border rounded-lg hover:bg-gray-100">
+                                    Batal
+                                </button>
+                                <button type="submit"
+                                        class="px-6 py-3 bg-[#2C2C2C] text-white rounded-lg hover:bg-black">
+                                    Simpan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div id="modalHapus{{ forloop.counter }}"
+                     class="hidden fixed inset-0 bg-black/50 z-[9999] items-center justify-center px-4">
+
+                    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl p-8">
+                        <h2 class="text-2xl font-semibold mb-5">Hapus Identitas?</h2>
+                        <p class="text-gray-600 mb-8">
+                            Yakin ingin menghapus dokumen <strong>{{ identitas.nomor }}</strong>?
+                        </p>
+
+                        <form method="POST" action="{% url 'member:identitas' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="hapus">
+                            <input type="hidden" name="nomor" value="{{ identitas.nomor }}">
+
+                            <div class="flex justify-end gap-3">
+                                <button type="button"
+                                        onclick="closeModal('modalHapus{{ forloop.counter }}')"
+                                        class="px-6 py-3 border rounded-lg hover:bg-gray-100">
+                                    Batal
+                                </button>
+                                <button type="submit"
+                                        class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                                    Hapus
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="py-20 text-gray-400">
+                        Belum ada identitas.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="modalTambah"
+     class="hidden fixed inset-0 bg-black/50 z-[9999] items-center justify-center px-4">
+
+    <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl p-8">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-semibold">Tambah Identitas</h2>
+            <button type="button"
+                    onclick="closeModal('modalTambah')"
+                    class="text-2xl">
+                ×
+            </button>
+        </div>
+
+        <form method="POST" action="{% url 'member:identitas' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="tambah">
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block mb-1 text-sm font-semibold">Nomor Dokumen</label>
+                    <input type="text" name="nomor" required
+                           class="w-full px-4 py-3 border rounded-lg"
+                           placeholder="Contoh: A12345678">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold">Jenis</label>
+                    <select name="jenis" required class="w-full px-4 py-3 border rounded-lg">
+                        <option value="">Pilih jenis</option>
+                        <option value="Paspor">Paspor</option>
+                        <option value="KTP">KTP</option>
+                        <option value="SIM">SIM</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold">Negara Penerbit</label>
+                    <input type="text" name="negara" required
+                           class="w-full px-4 py-3 border rounded-lg"
+                           placeholder="Indonesia">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block mb-1 text-sm font-semibold">Tanggal Terbit</label>
+                        <input type="date" name="tanggal_terbit" required
+                               class="w-full px-4 py-3 border rounded-lg">
+                    </div>
+
+                    <div>
+                        <label class="block mb-1 text-sm font-semibold">Tanggal Habis</label>
+                        <input type="date" name="tanggal_habis" required
+                               class="w-full px-4 py-3 border rounded-lg">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-8">
+                <button type="button"
+                        onclick="closeModal('modalTambah')"
+                        class="px-6 py-3 border rounded-lg hover:bg-gray-100">
+                    Batal
+                </button>
+                <button type="submit"
+                        class="px-6 py-3 bg-[#2C2C2C] text-white rounded-lg hover:bg-black">
+                    Simpan
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openModal(id) {
+    const modal = document.getElementById(id);
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeModal(id) {
+    const modal = document.getElementById(id);
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+</script>
+{% endblock %}

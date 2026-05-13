@@ -1,0 +1,421 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-semibold text-black">Kelola Member</h1>
+
+        <button type="button"
+                onclick="openModal('modalTambah')"
+                class="flex items-center gap-3 bg-white border border-gray-300 rounded-xl px-6 py-3 shadow-md hover:bg-gray-100 transition font-semibold">
+            <span class="text-2xl leading-none">+</span>
+            Tambah Member
+        </button>
+    </div>
+
+    {% if messages %}
+        <div class="mb-5 space-y-2">
+            {% for message in messages %}
+                <div class="px-4 py-3 rounded-lg bg-green-100 text-green-700">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <form method="GET" action="{% url 'staff:kelola_member' %}" class="mb-8">
+        <div class="flex gap-4 items-center">
+            <div class="relative flex-1">
+                <input type="text"
+                    name="q"
+                    value="{{ search }}"
+                    placeholder="Cari nama, email, atau nomor member"
+                    class="w-full px-6 py-4 pr-14 border border-gray-300 rounded-full shadow-md text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2046]">
+                <button type="submit"
+                        class="absolute right-5 top-1/2 -translate-y-1/2 text-xl">
+                    🔍
+                </button>
+            </div>
+
+            <select name="tier"
+                    onchange="this.form.submit()"
+                    class="px-5 py-4 border border-gray-300 rounded-xl shadow-md focus:outline-none">
+                <option value="Semua" {% if filter_tier == "Semua" %}selected{% endif %}>Semua Tier</option>
+                {% for tier in tier_choices %}
+                    <option value="{{ tier }}" {% if filter_tier == tier %}selected{% endif %}>
+                        {{ tier }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+    </form>
+
+    <div class="bg-white border border-gray-300 rounded-2xl shadow-md px-10 py-8 min-h-[520px]">
+        <table class="w-full text-center border-collapse">
+            <thead>
+                <tr class="text-gray-600 border-b border-gray-300">
+                    <th class="py-5 font-semibold">No.Member</th>
+                    <th class="py-5 font-semibold">Nama</th>
+                    <th class="py-5 font-semibold">Email</th>
+                    <th class="py-5 font-semibold">Tier</th>
+                    <th class="py-5 font-semibold">Total Miles</th>
+                    <th class="py-5 font-semibold">Award Miles</th>
+                    <th class="py-5 font-semibold">Bergabung</th>
+                    <th class="py-5 font-semibold">Aksi</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for member in members %}
+                <tr class="border-b border-gray-300 text-gray-700">
+                    <td class="py-5">{{ member.nomor }}</td>
+                    <td class="py-5">{{ member.nama }}</td>
+                    <td class="py-5">{{ member.email }}</td>
+                    <td class="py-5">
+                        <span class="px-3 py-1 rounded-full bg-gray-100 text-sm">
+                            {{ member.tier }}
+                        </span>
+                    </td>
+                    <td class="py-5">{{ member.total_miles }}</td>
+                    <td class="py-5">{{ member.award_miles }}</td>
+                    <td class="py-5">{{ member.bergabung }}</td>
+                    <td class="py-5">
+                        <div class="flex justify-center gap-3">
+                            <button type="button"
+                                    onclick="openModal('modalEdit{{ forloop.counter }}')"
+                                    class="text-blue-600 hover:text-blue-800 text-xl"
+                                    title="Edit">
+                                ✎
+                            </button>
+
+                            <button type="button"
+                                    onclick="openModal('modalHapus{{ forloop.counter }}')"
+                                    class="text-red-600 hover:text-red-800 text-xl"
+                                    title="Hapus">
+                                🗑
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+
+                <div id="modalEdit{{ forloop.counter }}"
+                    class="hidden fixed inset-0 bg-black/50 z-[9999] items-center justify-center px-4">
+
+                    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl p-8">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-semibold">Edit Member</h2>
+                            <button type="button"
+                                    onclick="closeModal('modalEdit{{ forloop.counter }}')"
+                                    class="text-2xl">
+                                ×
+                            </button>
+                        </div>
+
+                        <form method="POST" action="{% url 'staff:kelola_member' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="edit">
+                            <input type="hidden" name="email" value="{{ member.email }}">
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="col-span-2">
+                                    <label class="block mb-1 text-sm font-semibold">Email</label>
+                                    <input type="email"
+                                        value="{{ member.email }}"
+                                        readonly
+                                        class="w-full px-4 py-3 border rounded-lg bg-gray-100">
+                                </div>
+
+                                <div>
+                                    <label class="block mb-1 text-sm font-semibold">Nomor Member</label>
+                                    <input type="text"
+                                        value="{{ member.nomor }}"
+                                        readonly
+                                        class="w-full px-4 py-3 border rounded-lg bg-gray-100">
+                                </div>
+
+                                <div>
+                                    <label class="block mb-1 text-sm font-semibold">Tier</label>
+                                    <select name="tier"
+                                            class="w-full px-4 py-3 border rounded-lg">
+                                        {% for tier in tier_choices %}
+                                            <option value="{{ tier }}" {% if member.tier == tier %}selected{% endif %}>
+                                                {{ tier }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="col-span-2">
+                                    <label class="block mb-1 text-sm font-semibold">Nama Lengkap</label>
+                                    <input type="text"
+                                        name="nama"
+                                        value="{{ member.nama }}"
+                                        class="w-full px-4 py-3 border rounded-lg">
+                                </div>
+
+                                <div>
+                                    <label class="block mb-1 text-sm font-semibold">Total Miles</label>
+                                    <input type="number"
+                                        name="total_miles"
+                                        value="{{ member.total_miles }}"
+                                        class="w-full px-4 py-3 border rounded-lg">
+                                </div>
+
+                                <div>
+                                    <label class="block mb-1 text-sm font-semibold">Award Miles</label>
+                                    <input type="number"
+                                            name="award_miles"
+                                            value="{{ member.award_miles }}"
+                                            class="w-full px-4 py-3 border rounded-lg">
+                                </div>
+
+                                <div class="col-span-2">
+                                    <label class="block mb-1 text-sm font-semibold">Tanggal Bergabung</label>
+                                    <input type="text"
+                                        value="{{ member.bergabung }}"
+                                        readonly
+                                        class="w-full px-4 py-3 border rounded-lg bg-gray-100">
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end gap-3 mt-8">
+                                <button type="button"
+                                        onclick="closeModal('modalEdit{{ forloop.counter }}')"
+                                        class="px-6 py-3 border rounded-lg hover:bg-gray-100">
+                                    Batal
+                                </button>
+                                <button type="submit"
+                                        class="px-6 py-3 bg-[#2C2C2C] text-white rounded-lg hover:bg-black">
+                                    Simpan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div id="modalHapus{{ forloop.counter }}"
+                    class="hidden fixed inset-0 bg-black/50 z-[9999] items-center justify-center px-4">
+
+                    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl p-8">
+                        <div class="flex justify-between items-center mb-5">
+                            <h2 class="text-2xl font-semibold">Hapus Member?</h2>
+                            <button type="button"
+                                    onclick="closeModal('modalHapus{{ forloop.counter }}')"
+                                    class="text-2xl">
+                                ×
+                            </button>
+                        </div>
+
+                        <p class="text-gray-600 mb-8">
+                            Apakah kamu yakin ingin menghapus
+                            <strong>{{ member.nama }}</strong>?
+                            Data terkait member juga akan terhapus.
+                        </p>
+
+                        <form method="POST" action="{% url 'staff:kelola_member' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="hapus">
+                            <input type="hidden" name="email" value="{{ member.email }}">
+
+                            <div class="flex justify-end gap-3">
+                                <button type="button"
+                                        onclick="closeModal('modalHapus{{ forloop.counter }}')"
+                                        class="px-6 py-3 border rounded-lg hover:bg-gray-100">
+                                    Batal
+                                </button>
+                                <button type="submit"
+                                        class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                                    Hapus
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="py-20 text-gray-400">
+                        Tidak ada data member.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="flex justify-center gap-3 mt-10 items-center text-lg">
+        {% if page_obj.has_previous %}
+            <a href="?q={{ search }}&tier={{ filter_tier }}&page={{ page_obj.previous_page_number }}"
+            class="px-4 py-2 border rounded-lg hover:bg-gray-100">
+                Prev
+            </a>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <span class="bg-[#2C2C2C] text-white w-10 h-10 rounded-lg flex items-center justify-center">
+                    {{ num }}
+                </span>
+            {% else %}
+                <a href="?q={{ search }}&tier={{ filter_tier }}&page={{ num }}"
+                class="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-gray-100">
+                    {{ num }}
+                </a>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+            <a href="?q={{ search }}&tier={{ filter_tier }}&page={{ page_obj.next_page_number }}"
+            class="px-4 py-2 border rounded-lg hover:bg-gray-100">
+                Next
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<div id="modalTambah"
+    class="hidden fixed inset-0 bg-black/50 z-[9999] items-center justify-center px-4">
+
+    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl p-8">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-semibold">Tambah Member Baru</h2>
+            <button type="button"
+                    onclick="closeModal('modalTambah')"
+                    class="text-2xl">
+                ×
+            </button>
+        </div>
+
+        <form method="POST" action="{% url 'staff:kelola_member' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="tambah">
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block mb-1 text-sm font-semibold">Email</label>
+                    <input type="email"
+                        name="email"
+                        required
+                        class="w-full px-4 py-3 border rounded-lg"
+                        placeholder="email@example.com">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold">Password</label>
+                    <input type="password"
+                        name="password"
+                        required
+                        class="w-full px-4 py-3 border rounded-lg"
+                        placeholder="Password">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold">Salutation</label>
+                    <select name="salutation"
+                            required
+                            class="w-full px-4 py-3 border rounded-lg">
+                        <option value="">Pilih Salutation</option>
+                        <option value="Mr.">Mr.</option>
+                        <option value="Mrs.">Mrs.</option>
+                        <option value="Ms.">Ms.</option>
+                        <option value="Dr.">Dr.</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold">Tier Awal</label>
+                    <select name="tier"
+                            required
+                            class="w-full px-4 py-3 border rounded-lg">
+                        {% for tier in tier_choices %}
+                            <option value="{{ tier }}">{{ tier }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold">Nama Depan-Tengah</label>
+                    <input type="text"
+                        name="first_mid_name"
+                        required
+                        class="w-full px-4 py-3 border rounded-lg"
+                        placeholder="Nama depan-tengah">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold">Nama Belakang</label>
+                    <input type="text"
+                        name="last_name"
+                        required
+                        class="w-full px-4 py-3 border rounded-lg"
+                        placeholder="Nama belakang">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold">Country Code</label>
+                    <input type="text"
+                        name="country_code"
+                        required
+                        class="w-full px-4 py-3 border rounded-lg"
+                        placeholder="+62">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold">Nomor HP</label>
+                    <input type="text"
+                        name="mobile_number"
+                        required
+                        class="w-full px-4 py-3 border rounded-lg"
+                        placeholder="81234567890">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold">Tanggal Lahir</label>
+                    <input type="date"
+                        name="tanggal_lahir"
+                        required
+                        class="w-full px-4 py-3 border rounded-lg">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold">Kewarganegaraan</label>
+                    <input type="text"
+                        name="kewarganegaraan"
+                        required
+                        class="w-full px-4 py-3 border rounded-lg"
+                        placeholder="Indonesia">
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-8">
+                <button type="button"
+                        onclick="closeModal('modalTambah')"
+                        class="px-6 py-3 border rounded-lg hover:bg-gray-100">
+                    Batal
+                </button>
+                <button type="submit"
+                        class="px-6 py-3 bg-[#2C2C2C] text-white rounded-lg hover:bg-black">
+                    Simpan
+                </button>
+            </div>
+        </form>
+    </div>
+</div> 
+{% endblock content %}
+
+{% block extra_js %}
+    <script>
+    function openModal(id) {
+        const modal = document.getElementById(id);
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeModal(id) {
+        const modal = document.getElementById(id);
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+    </script>
+{% endblock extra_js %}

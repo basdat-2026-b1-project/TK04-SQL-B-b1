@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Beli Award Miles Package{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 md:px-10 pt-10 pb-20">
+    
+    <div class="mb-10 text-center sm:text-left">
+        <h1 class="text-4xl font-marcellus text-[#0A1D37] tracking-wider">Beli Award Miles Package</h1>
+        <p class="text-gray-500 font-inter-semibold mt-2 text-xs uppercase tracking-[0.2em]">
+            Award Miles saat ini: <span class="text-gray-900 ml-1">{{ request.session.total_miles|default:"32,000"|intcomma }}</span>
+        </p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="mb-8 p-4 rounded-xl bg-green-50 text-green-700 border border-green-100 font-inter-semibold text-xs shadow-sm">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        {% for pkg in packages %}
+        <div class="bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm relative flex flex-col justify-between min-h-[340px] transition-all hover:shadow-md">
+            
+            <div class="absolute top-6 right-8 bg-[#A69C6D] text-white text-[10px] font-inter-semibold px-3 py-1 rounded-full uppercase tracking-widest">
+                {{ pkg.id }}
+            </div>
+
+            <div class="mt-4">
+                <div class="w-12 h-12 bg-[#F5F1E9] rounded-2xl flex items-center justify-center mb-8 text-[#A69C6D]">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                </div>
+
+                <h2 class="text-4xl font-marcellus text-gray-900 leading-none mb-1">{{ pkg.miles|intcomma }}</h2>
+                <p class="text-gray-400 text-[10px] font-inter-semibold uppercase tracking-[0.2em] mb-6">Award Miles</p>
+                
+                <p class="text-xl font-inter-semibold text-[#0A1D37]">{{ pkg.harga }}</p>
+            </div>
+
+            <button onclick="bukaModalBeli('{{ pkg.id }}', '{{ pkg.miles|intcomma }}', '{{ pkg.harga }}')" 
+                class="w-full bg-[#0A1D37] text-white py-3.5 rounded-2xl font-inter-semibold text-xs hover:bg-black transition-all mt-8 uppercase tracking-widest">
+                Beli Package
+            </button>
+        </div>
+        {% empty %}
+        <div class="col-span-full text-center py-20 text-gray-400 italic">
+            Belum ada paket yang tersedia.
+        </div>
+        {% endfor %}
+    </div>
+
+</div> <div id="modalBeli" class="fixed inset-0 bg-gray-900/60 z-[9999] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-[40px] p-12 max-w-lg w-full shadow-2xl relative font-inter">
+        <button onclick="tutupModalBeli()" class="absolute top-8 right-8 text-gray-400 hover:text-gray-600 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+
+        <h2 class="text-3xl font-marcellus text-[#0A1D37] mb-4">Konfirmasi Pembelian</h2>
+        <p class="text-gray-500 text-sm mb-10 font-medium leading-relaxed">Anda akan melakukan pembelian paket miles dengan detail sebagai berikut:</p>
+
+        <div class="space-y-5 mb-12 bg-gray-50 p-6 rounded-[24px]">
+            <div class="flex justify-between items-center">
+                <span class="text-xs font-inter-semibold text-gray-400 uppercase tracking-widest">Award Miles</span>
+                <span id="modal-miles" class="text-lg font-marcellus text-green-600">+1,000</span>
+            </div>
+            <div class="flex justify-between items-center border-t border-gray-200 pt-5">
+                <span class="text-xs font-inter-semibold text-gray-400 uppercase tracking-widest">Total Harga</span>
+                <span id="modal-harga" class="text-lg font-inter-semibold text-gray-900">Rp 150,000</span>
+            </div>
+        </div>
+
+        <form method="POST" action="">
+            {% csrf_token %}
+            <input type="hidden" name="package_id" id="input_package_id">
+            <div class="flex flex-col gap-3">
+                <button type="submit" class="w-full py-4 rounded-2xl bg-[#0A1D37] text-white font-inter-semibold text-xs hover:bg-black transition-all shadow-lg uppercase tracking-widest">
+                    Konfirmasi & Bayar
+                </button>
+                <button type="button" onclick="tutupModalBeli()" class="w-full py-4 rounded-2xl border border-gray-200 text-gray-500 font-inter-semibold text-xs hover:bg-gray-50 transition-all uppercase tracking-widest">
+                    Batal
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+    function bukaModalBeli(id, miles, harga) {
+        document.getElementById('input_package_id').value = id;
+        document.getElementById('modal-miles').innerText = `+${miles}`;
+        document.getElementById('modal-harga').innerText = harga;
+        document.getElementById('modalBeli').classList.remove('hidden');
+        document.getElementById('modalBeli').classList.add('flex'); // Pastikan flex aktif saat muncul
+        document.body.style.overflow = 'hidden'; 
+    }
+
+    function tutupModalBeli() {
+        document.getElementById('modalBeli').classList.add('hidden');
+        document.getElementById('modalBeli').classList.remove('flex');
+        document.body.style.overflow = 'auto';
+    }
+</script>
+{% endblock extra_js %}

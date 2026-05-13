@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<section class="min-h-[calc(100vh-104px)] bg-cover bg-center px-16 py-10"
+style="background-image: linear-gradient(rgba(255,255,255,.25), rgba(255,255,255,.25)), url('{% static "images/dashboard-bg.jpg" %}');">
+
+{% if request.session.role == "staff" %}
+<h1 class="text-3xl font-semibold mb-7">Hello, {{ request.session.nama }}</h1>
+{% endif %}
+
+<div class="max-w-6xl mx-auto bg-white rounded-[15px] border border-[#C6C6C6] card-shadow p-8 mb-8">
+<h2 class="font-marcellus text-xl mb-6">Informasi Pribadi</h2>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-y-8">
+    <div>
+    <p class="text-[#757575] text-sm">Nama Lengkap</p>
+    <p class="text-sm">{{ request.session.nama }}</p>
+    </div>
+    <div>
+    <p class="text-[#757575] text-sm">Email</p>
+    <p class="text-sm">{{ request.session.email }}</p>
+    </div>
+    <div>
+    <p class="text-[#757575] text-sm">Telepon</p>
+    <p class="text-sm">{{ telepon|default:"-" }}</p>
+    </div>
+    <div>
+    <p class="text-[#757575] text-sm">Kewarganegaraan</p>
+    <p class="text-sm">{{ kewarganegaraan|default:"Indonesia" }}</p>
+    </div>
+    <div>
+    <p class="text-[#757575] text-sm">Tanggal Lahir</p>
+    <p class="text-sm">{{ tanggal_lahir|default:"-" }}</p>
+    </div>
+</div>
+</div>
+
+{% if request.session.role == "staff" %}
+<div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10">
+    <div class="bg-white rounded-[15px] border border-[#C6C6C6] card-shadow p-5 flex items-center gap-4">
+    <span class="text-4xl">▣</span>
+    <div>
+        <p class="font-marcellus text-[#757575]">ID Staff</p>
+        <p class="text-2xl">{{ id_staff|default:"MOO01" }}</p>
+    </div>
+    </div>
+
+    <div class="bg-white rounded-[15px] border border-[#C6C6C6] card-shadow p-5 flex items-center gap-4">
+    <span class="text-4xl">✈</span>
+    <div>
+        <p class="font-marcellus text-[#757575]">Maskapai</p>
+        <p class="text-2xl">{{ maskapai|default:"Etihad" }}</p>
+    </div>
+    </div>
+
+    <div class="bg-white rounded-[15px] border border-[#C6C6C6] card-shadow p-5 flex items-center gap-4">
+    <span class="text-4xl">◷</span>
+    <div>
+        <p class="font-marcellus text-[#757575]">Klaim Menunggu</p>
+        <p class="text-2xl">{{ klaim_menunggu|default:"15" }}</p>
+    </div>
+    </div>
+
+    <div class="bg-white rounded-[15px] border border-[#C6C6C6] card-shadow p-5 flex items-center gap-4">
+    <span class="text-4xl">✹</span>
+    <div>
+        <p class="font-marcellus text-[#757575]">Klaim Disetujui</p>
+        <p class="text-2xl">{{ klaim_disetujui|default:"10" }}</p>
+    </div>
+    </div>
+
+    <div class="bg-white rounded-[15px] border border-[#C6C6C6] card-shadow p-5 flex items-center gap-4">
+    <span class="text-4xl">⊗</span>
+    <div>
+        <p class="font-marcellus text-[#757575]">Klaim Ditolak</p>
+        <p class="text-2xl">{{ klaim_ditolak|default:"3" }}</p>
+    </div>
+    </div>
+</div>
+
+{% else %}
+<div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+    <div class="bg-white rounded-[15px] border border-[#C6C6C6] card-shadow p-5 flex items-center gap-4">
+    <span class="text-4xl">▣</span>
+    <div>
+        <p class="font-marcellus text-[#757575]">Nomor Member</p>
+        <p class="text-2xl">{{ nomor_member|default:"MOO01" }}</p>
+    </div>
+    </div>
+
+    <div class="bg-white rounded-[15px] border border-[#C6C6C6] card-shadow p-5 flex items-center gap-4">
+    <span class="text-4xl">🏅</span>
+    <div>
+        <p class="font-marcellus text-[#757575]">Tier</p>
+        <span class="inline-block bg-[#AE9530] px-8 py-2 rounded-[15px] font-medium">GOLD</span>
+    </div>
+    </div>
+
+    <div class="bg-white rounded-[15px] border border-[#C6C6C6] card-shadow p-5 flex items-center gap-4">
+    <span class="text-4xl">▮▮▮</span>
+    <div>
+        <p class="font-marcellus text-[#757575]">Total Miles</p>
+        <p class="text-2xl">{{ total_miles|default:"45,000" }}</p>
+    </div>
+    </div>
+
+    <div class="bg-white rounded-[15px] border border-[#C6C6C6] card-shadow p-5 flex items-center gap-4">
+    <span class="text-4xl">🎁</span>
+    <div>
+        <p class="font-marcellus text-[#757575]">Award Miles</p>
+        <p class="text-2xl">{{ award_miles|default:"32,000" }}</p>
+    </div>
+    </div>
+</div>
+
+<div class="max-w-6xl mx-auto bg-white/90 rounded-[15px] border border-[#C6C6C6] card-shadow p-8">
+  <h2 class="font-marcellus text-lg mb-6">
+    {% if transaksi_terbaru %}
+      5 Transaksi Terbaru
+    {% else %}
+      Transaksi Terbaru
+    {% endif %}
+  </h2>
+
+  {% if transaksi_terbaru %}
+    <div class="space-y-5">
+      {% for transaksi in transaksi_terbaru|slice:":5" %}
+        <div class="bg-[#F9F9F9] rounded-[15px] card-shadow px-6 py-4 grid grid-cols-3 text-sm">
+          <span>{{ transaksi.jenis }}</span>
+          <span>{{ transaksi.tanggal }}</span>
+          <span class="text-right {% if transaksi.jumlah < 0 %}text-[#D13232]{% else %}text-[#38AC38]{% endif %}">
+            {{ transaksi.jumlah }} miles
+          </span>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="bg-[#F9F9F9] rounded-[15px] px-6 py-5 text-sm text-gray-500">
+      Belum ada transaksi.
+    </div>
+  {% endif %}
+</div>
+{% endif %}
+</section>
+{% endblock %}

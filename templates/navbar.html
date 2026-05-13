@@ -1,0 +1,113 @@
+<nav class="bg-[#1a233a] text-white shadow-md relative z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+            
+            <div class="flex-shrink-0 flex items-center space-x-2">
+                <svg class="w-8 h-8 fill-current" viewBox="0 0 24 24">
+                    <path d="M21,16L22,19H2L3,16H3.82l2.3-7.53C6.32,7.74,7.02,7,7.87,7H16.13c0.85,0,1.55,0.74,1.75,1.47L20.18,16H21M17,16L15.3,10H8.7L7,16H17Z" />
+                </svg>
+                <span class="text-xl font-bold tracking-wider font-marcellus hidden sm:block">
+                    {% if request.session.role == 'staf' %}AEROMILES STAFF{% else %}AEROMILES{% endif %}
+                </span>
+            </div>
+
+            <div class="hidden lg:flex space-x-6 items-center h-full">
+                {% if request.session.role == 'member' %}
+                    <a href="{% url 'member:dashboard' %}" class="flex flex-col justify-center items-center h-full border-b-2 transition px-2 {% if request.resolver_match.url_name == 'dashboard' %}border-white text-white{% else %}border-transparent text-gray-400 hover:text-white{% endif %}">
+                        <span class="text-[10px] font-medium uppercase tracking-wider text-center">Dashboard</span>
+                    </a>
+                    <a href="{% url 'member:identitas' %}" class="flex flex-col justify-center items-center h-full border-b-2 transition px-2 {% if request.resolver_match.url_name == 'identitas' %}border-white text-white{% else %}border-transparent text-gray-400 hover:text-white{% endif %}">
+                        <span class="text-[10px] font-medium uppercase tracking-wider text-center">Identitas<br>Saya</span>
+                    </a>
+                    <a href="{% url 'member:claim_list' %}" class="flex flex-col justify-center items-center h-full border-b-2 transition px-2 {% if request.resolver_match.url_name == 'claim_list' %}border-white text-white{% else %}border-transparent text-gray-400 hover:text-white{% endif %}">
+                        <span class="text-[10px] font-medium uppercase tracking-wider text-center">Klaim<br>Miles</span>
+                    </a>
+                    <a href="{% url 'member:transfer' %}" class="flex flex-col justify-center items-center h-full border-b-2 transition px-2 {% if request.resolver_match.url_name == 'transfer' %}border-white text-white{% else %}border-transparent text-gray-400 hover:text-white{% endif %}">
+                        <span class="text-[10px] font-medium uppercase tracking-wider text-center">Transfer<br>Miles</span>
+                    </a>
+                    <a href="{% url 'member:redeem' %}" class="flex flex-col justify-center items-center h-full border-b-2 transition px-2 {% if request.resolver_match.url_name == 'redeem' %}border-white text-white{% else %}border-transparent text-gray-400 hover:text-white{% endif %}">
+                        <span class="text-[10px] font-medium uppercase tracking-wider text-center">Redeem<br>Hadiah</span>
+                    </a>
+                    <a href="{% url 'member:package' %}" class="flex flex-col justify-center items-center h-full border-b-2 transition px-2 {% if request.resolver_match.url_name == 'package' %}border-white text-white{% else %}border-transparent text-gray-400 hover:text-white{% endif %}">
+                        <span class="text-[10px] font-medium uppercase tracking-wider text-center">Beli<br>Package</span>
+                    </a>
+                    <a href="{% url 'member:info_tier' %}" class="flex flex-col justify-center items-center h-full border-b-2 transition px-2 {% if request.resolver_match.url_name == 'info_tier' %}border-white text-white{% else %}border-transparent text-gray-400 hover:text-white{% endif %}">
+                        <span class="text-[10px] font-medium uppercase tracking-wider text-center">Info<br>Tier</span>
+                    </a>
+                    <a href="{% url 'accounts:profile' %}" class="flex flex-col justify-center items-center h-full border-b-2 transition px-2 {% if request.resolver_match.url_name == 'profile' %}border-white text-white{% else %}border-transparent text-gray-400 hover:text-white{% endif %}">
+                        <span class="text-[10px] font-medium uppercase tracking-wider text-center">Pengaturan<br>Profil</span>
+                    </a>
+                {% else %}
+                    <a href="{% url 'staff:staff-dashboard' %}" class="flex items-center space-x-1 h-full border-b-2 transition pt-1 {% if request.resolver_match.url_name == 'staff-dashboard' %}border-white text-white{% else %}border-transparent text-gray-400 hover:text-white{% endif %}">                        
+                      <span class="text-xs font-medium uppercase tracking-wider">Dashboard</span>
+                    </a>
+                    <a href="{% url 'staff:kelola_member' %}" class="flex items-center space-x-1 h-full border-b-2 transition pt-1 {% if request.resolver_match.url_name == 'kelola_member' %}border-white text-white{% else %}border-transparent text-gray-400 hover:text-white{% endif %}">
+                        <span class="text-xs font-medium uppercase tracking-wider">Kelola Member</span>
+                    </a>
+                    <a href="{% url 'staff:kelola_klaim' %}" class="flex items-center space-x-1 h-full border-b-2 transition pt-1 {% if request.resolver_match.url_name == 'kelola_klaim' %}border-white text-white{% else %}border-transparent text-gray-400 hover:text-white{% endif %}">
+                        <span class="text-xs font-medium uppercase tracking-wider">Kelola Klaim</span>
+                    </a>
+                    <a href="{% url 'staff:kelola_hadiah' %}" class="flex items-center space-x-1 h-full border-b-2 transition pt-1 {% if request.resolver_match.url_name == 'kelola_hadiah' %}border-white text-white{% else %}border-transparent text-gray-400 hover:text-white{% endif %}">
+                        <span class="text-xs font-medium uppercase tracking-wider">Kelola Hadiah</span>
+                    </a>
+                    <a href="{% url 'staff:kelola_mitra' %}" class="flex items-center space-x-1 h-full border-b-2 transition pt-1 {% if request.resolver_match.url_name == 'kelola_mitra' %}border-white text-white{% else %}border-transparent text-gray-400 hover:text-white{% endif %}">
+                        <span class="text-xs font-medium uppercase tracking-wider">Kelola Mitra</span>
+                    </a>
+                    <a href="{% url 'staff:laporan' %}" class="flex items-center space-x-1 h-full border-b-2 transition pt-1 {% if request.resolver_match.url_name == 'laporan' %}border-white text-white{% else %}border-transparent text-gray-400 hover:text-white{% endif %}">
+                        <span class="text-xs font-medium uppercase tracking-wider">Laporan</span>
+                    </a>
+                    <a href="{% url 'accounts:profile' %}" class="flex items-center space-x-1 h-full border-b-2 transition pt-1 {% if request.resolver_match.url_name == 'profile' %}border-white text-white{% else %}border-transparent text-gray-400 hover:text-white{% endif %}">
+                        <span class="text-xs font-medium uppercase tracking-wider">Profil</span>
+                    </a>
+                {% endif %}
+            </div>
+
+            <div class="hidden lg:flex items-center space-x-4">
+                <a href="{% url 'accounts:logout' %}" title="Logout" class="text-gray-400 hover:text-white transition flex items-center p-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                </a>
+            </div>
+
+            <div class="flex lg:hidden items-center">
+                <button id="mobile-menu-btn" class="text-gray-300 hover:text-white focus:outline-none">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="mobile-menu" class="hidden lg:hidden bg-[#151c2f] px-4 pt-2 pb-4 space-y-2 border-t border-gray-700">
+        
+        {% if request.session.role == 'member' %}
+            <a href="{% url 'member:dashboard' %}" class="block px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'dashboard' %}bg-white/10 text-white{% else %}text-gray-300 hover:bg-white/5{% endif %}">Dashboard</a>
+            <a href="{% url 'member:identitas' %}" class="block px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'identitas' %}bg-white/10 text-white{% else %}text-gray-300 hover:bg-white/5{% endif %}">Identitas Saya</a>
+            <a href="{% url 'member:claim_list' %}" class="block px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'claim_list' %}bg-white/10 text-white{% else %}text-gray-300 hover:bg-white/5{% endif %}">Klaim Miles</a>
+            <a href="{% url 'member:transfer' %}" class="block px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'transfer' %}bg-white/10 text-white{% else %}text-gray-300 hover:bg-white/5{% endif %}">Transfer Miles</a>
+            <a href="{% url 'member:redeem' %}" class="block px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'redeem' %}bg-white/10 text-white{% else %}text-gray-300 hover:bg-white/5{% endif %}">Redeem Hadiah</a>
+            <a href="{% url 'member:package' %}" class="block px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'package' %}bg-white/10 text-white{% else %}text-gray-300 hover:bg-white/5{% endif %}">Beli Package</a>
+            <a href="{% url 'member:info_tier' %}" class="block px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'info_tier' %}bg-white/10 text-white{% else %}text-gray-300 hover:bg-white/5{% endif %}">Info Tier</a>
+            <a href="{% url 'accounts:profile' %}" class="block px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'profile' %}bg-white/10 text-white{% else %}text-gray-300 hover:bg-white/5{% endif %}">Pengaturan Profil</a>
+        {% else %}
+            <a href="{% url 'staff:staff-dashboard' %}" class="block px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'staff-dashboard' %}bg-white/10 text-white{% else %}text-gray-300 hover:bg-white/5{% endif %}">Dashboard</a>
+            <a href="{% url 'staff:kelola_member' %}" class="block px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'kelola_member' %}bg-white/10 text-white{% else %}text-gray-300 hover:bg-white/5{% endif %}">Kelola Member</a>
+            <a href="{% url 'staff:kelola_klaim' %}" class="block px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'kelola_klaim' %}bg-white/10 text-white{% else %}text-gray-300 hover:bg-white/5{% endif %}">Kelola Klaim</a>
+            <a href="{% url 'staff:kelola_hadiah' %}" class="block px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'kelola_hadiah' %}bg-white/10 text-white{% else %}text-gray-300 hover:bg-white/5{% endif %}">Kelola Hadiah</a>
+            <a href="{% url 'staff:kelola_mitra' %}" class="block px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'kelola_mitra' %}bg-white/10 text-white{% else %}text-gray-300 hover:bg-white/5{% endif %}">Kelola Mitra</a>
+            <a href="{% url 'staff:laporan' %}" class="block px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'laporan' %}bg-white/10 text-white{% else %}text-gray-300 hover:bg-white/5{% endif %}">Laporan Transaksi</a>
+            <a href="{% url 'accounts:profile' %}" class="block px-3 py-2 rounded-md text-sm font-medium {% if request.resolver_match.url_name == 'profile' %}bg-white/10 text-white{% else %}text-gray-300 hover:bg-white/5{% endif %}">Profil</a>
+        {% endif %}
+        
+        <hr class="border-gray-600 my-2">
+        <a href="{% url 'accounts:logout' %}" class="block px-3 py-2 rounded-md text-sm font-medium text-red-400 hover:bg-red-500/10">Logout</a>
+    </div>
+</nav>
+
+<script>
+    // Script agar tombol hamburger berfungsi!
+    document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+        document.getElementById('mobile-menu').classList.toggle('hidden');
+    });
+</script>

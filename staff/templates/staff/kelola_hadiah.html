@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Kelola Hadiah - AeroMiles Staff{% endblock %}
+
+{% block content %}
+
+    <div class="max-w-6xl mx-auto px-4 py-8">
+
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">Manajemen Hadiah & Penyedia</h2>
+                <p class="text-sm text-gray-500">Katalog reward penukaran miles</p>
+            </div>
+            <button onclick="toggleModal('modalHadiah')" class="bg-[#3a5a9c] hover:bg-[#2c457a] text-white px-5 py-2.5 rounded-md text-sm font-medium transition shadow-sm">
+                + Tambah Hadiah
+            </button>
+        </div>
+
+        <div class="bg-white rounded-xl border border-gray-200 card-shadow overflow-hidden">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase text-xs font-bold">
+                    <tr>
+                        <th class="px-6 py-4">Kode</th>
+                        <th class="px-6 py-4">Nama Hadiah</th>
+                        <th class="px-6 py-4">Penyedia</th>
+                        <th class="px-6 py-4">Miles</th>
+                        <th class="px-6 py-4">Status</th>
+                        <th class="px-6 py-4 text-right">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for hadiah in hadiah_list %}
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-6 py-4 font-mono text-xs bg-gray-50">{{ hadiah.kode }}</td>
+                        <td class="px-6 py-4">
+                            <div class="font-bold text-gray-800">{{ hadiah.nama }}</div>
+                            <div class="text-xs text-gray-500 mt-1 truncate max-w-[200px]">{{ hadiah.deskripsi }}</div>
+                        </td>
+                        <td class="px-6 py-4">{{ hadiah.penyedia }}</td>
+                        <td class="px-6 py-4 font-bold text-[#3a5a9c]">{{ hadiah.miles }}</td>
+                        <td class="px-6 py-4">
+                            {% if hadiah.aktif %}
+                                <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">Aktif</span>
+                            {% else %}
+                                <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-semibold">Selesai</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-right flex justify-end space-x-3">
+                            <button onclick="openEditModal('{{ hadiah.kode }}', '{{ hadiah.nama }}', '{{ hadiah.penyedia }}', '{{ hadiah.miles }}', '{{ hadiah.deskripsi }}', '{{ hadiah.valid_start }}', '{{ hadiah.program_end }}')" 
+                                    class="text-blue-500 hover:text-blue-700 font-medium text-sm flex items-center transition">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                </svg> Edit
+                            </button>
+
+                            <button type="button" onclick="openDeleteModal('{{ hadiah.kode }}')" 
+                                    class="text-red-500 hover:text-red-700 font-medium text-sm flex items-center disabled:opacity-30 disabled:cursor-not-allowed transition" 
+                                    {% if hadiah.aktif %}disabled title="Hanya bisa dihapus jika selesai"{% endif %}>
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg> Hapus
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="modalHadiah" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-lg">Buat Reward Baru</h3>
+                <button onclick="toggleModal('modalHadiah')" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+            </div>
+            <form method="POST" class="p-6 space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="tambah">
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Reward</label>
+                    <input type="text" name="nama_reward" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Penyedia</label>
+                        <select name="penyedia_name" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none bg-white">
+                            <option value="">Pilih...</option>
+                            {% for val, label in penyedia_choices %}
+                            <option value="{{ label }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Miles Dibutuhkan</label>
+                        <input type="number" name="miles" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Deskripsi</label>
+                    <textarea name="deskripsi" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Mulai Berlaku</label>
+                        <input type="date" name="valid_start" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Program Berakhir</label>
+                        <input type="date" name="program_end" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="pt-4 flex justify-end space-x-2">
+                    <button type="button" onclick="toggleModal('modalHadiah')" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-md">Batal</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium bg-[#3a5a9c] text-white rounded-md hover:bg-[#2c457a]">Simpan Hadiah</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalEditHadiah" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-lg">Edit Hadiah</h3>
+                <button onclick="toggleModal('modalEditHadiah')" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+            </div>
+            <form method="POST" class="p-6 space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit">
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Kode Hadiah</label>
+                        <input type="text" name="kode_hadiah" id="edit_kode" readonly class="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Hadiah</label>
+                        <input type="text" name="nama_reward" id="edit_nama" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Penyedia</label>
+                        <select name="penyedia_name" id="edit_penyedia" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none bg-white">
+                            <option value="">Pilih...</option>
+                            {% for val, label in penyedia_choices %}
+                            <option value="{{ label }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Miles Dibutuhkan</label>
+                        <input type="number" name="miles" id="edit_miles" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Deskripsi</label>
+                    <textarea name="deskripsi" id="edit_deskripsi" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Valid Start</label>
+                        <input type="date" name="valid_start" id="edit_start" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Program End</label>
+                        <input type="date" name="program_end" id="edit_end" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="pt-4 flex justify-end space-x-2">
+                    <button type="button" onclick="toggleModal('modalEditHadiah')" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-md">Batal</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium bg-[#3a5a9c] text-white rounded-md hover:bg-[#2c457a]">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalHapusHadiah" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden p-6 text-center">
+            <h3 class="font-bold text-xl text-gray-800 mb-2">Hapus Hadiah?</h3>
+            <p class="text-sm text-gray-500 mb-6 px-4">Tindakan ini tidak dapat dibatalkan. Pastikan hadiah ini sudah benar-benar tidak berlaku lagi.</p>
+            
+            <form method="POST" class="flex justify-center space-x-3">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="hapus">
+                <input type="hidden" name="kode_hadiah" id="delete_kode">
+                
+                <button type="button" onclick="toggleModal('modalHapusHadiah')" class="px-6 py-2 text-sm font-bold text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition">
+                    Batal
+                </button>
+                <button type="submit" class="px-6 py-2 text-sm font-bold bg-[#1a233a] text-white rounded-md hover:bg-[#0f1523] transition">
+                    Hapus
+                </button>
+            </form>
+        </div>
+    </div>
+
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+    function openEditModal(kode, nama, penyedia, miles, deskripsi, start, end) {
+        document.getElementById('edit_kode').value = kode;
+        document.getElementById('edit_nama').value = nama;
+        document.getElementById('edit_penyedia').value = penyedia;
+        document.getElementById('edit_miles').value = miles;
+        document.getElementById('edit_deskripsi').value = deskripsi;
+        document.getElementById('edit_start').value = start;
+        document.getElementById('edit_end').value = end;
+        toggleModal('modalEditHadiah');
+    }
+
+    function openDeleteModal(kode) {
+        document.getElementById('delete_kode').value = kode;
+        toggleModal('modalHapusHadiah');
+    }
+</script>
+{% endblock extra_js %}
