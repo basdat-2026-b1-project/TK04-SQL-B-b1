@@ -204,6 +204,166 @@ def dashboard(request):
     }
     return render(request, 'staff/dashboard.html', context)
 
+@login_required_staf
+def laporan_transaksi_view(request):
+    """
+    Staf melihat seluruh riwayat transaksi miles:
+        - Redeem hadiah
+        - Pembelian package
+        - Transfer antar-member
+
+    Fitur filter: tipe transaksi, tanggal mulai, tanggal akhir,
+                  email member, dan nama maskapai staf (scope).
+
+    Tabel yang digunakan:
+        redeem                      (email_member, kode_hadiah, timestamp)
+        hadiah                      (kode_hadiah, nama, miles)
+        member_award_miles_package  (id_award_miles_package, email_member, timestamp)
+        award_miles_package         (id, jumlah_award_miles, harga_paket)
+        transfer                    (email_member_1, email_member_2, timestamp, jumlah, catatan)
+        staf                        (email, kode_maskapai)
+    """
+    email_staf   = request.session.get('email')
+    filter_tipe  = request.GET.get('tipe', 'Semua')
+    filter_mulai = request.GET.get('tanggal_mulai', '')
+    filter_akhir = request.GET.get('tanggal_akhir', '')
+    filter_email = request.GET.get('email_member', '').strip()
+
+    transaksi_list = []
+
+    # ── Redeem ──────────────────────────────────────────────
+    if filter_tipe in ('Semua', 'Redeem'):
+        query  = """
+            SELECT
+                r.timestamp,
+                r.email_member,
+                'Redeem'        AS tipe,
+                h.nama          AS keterangan,
+                -h.miles        AS miles
+            FROM redeem r
+            JOIN hadiah h ON h.kode_hadiah = r.kode_hadiah
+            WHERE 1=1
+        """
+        params = []
+        query, params = _apply_filters(query, params, filter_mulai, filter_akhir, filter_email)
+        with connection.cursor() as cur:
+            cur.execute(query, params)
+            cols = [c.name for c in cur.description]
+            transaksi_list += [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    # ── Pembelian Package ────────────────────────────────────
+    if filter_tipe in ('Semua', 'Package'):
+        query  = """
+            SELECT
+                mp.timestamp,
+                mp.email_member,
+                'Package'       AS tipe,
+                CONCAT('Beli paket ', p.id, ' (', p.jumlah_award_miles, ' miles)') AS keterangan,
+                p.jumlah_award_miles AS miles
+            FROM member_award_miles_package mp
+            JOIN award_miles_package p ON p.id = mp.id_award_miles_package
+            WHERE 1=1
+        """
+        params = []
+        query, params = _apply_filters(query, params, filter_mulai, filter_akhir, filter_email)
+        with connection.cursor() as cur:
+            cur.execute(query, params)
+            cols = [c.name for c in cur.description]
+            transaksi_list += [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    # ── Transfer ─────────────────────────────────────────────
+    if filter_tipe in ('Semua', 'Transfer'):
+        # Kirim
+        query  = """
+            SELECT
+                t.timestamp,
+                t.email_member_1 AS email_member,
+                'Transfer Keluar' AS tipe,
+                CONCAT('Ke ', t.email_member_2,
+                       CASE WHEN t.catatan IS NOT NULL THEN CONCAT(' - ', t.catatan) ELSE '' END
+                ) AS keterangan,
+                -t.jumlah AS miles
+            FROM transfer t
+            WHERE 1=1
+        """
+        params = []
+        if filter_email:
+            query  += " AND t.email_member_1 = %s"
+            params += [filter_email]
+        if filter_mulai:
+            query  += " AND t.timestamp >= %s"
+            params += [filter_mulai]
+        if filter_akhir:
+            query  += " AND t.timestamp <= %s"
+            params += [filter_akhir + ' 23:59:59']
+        with connection.cursor() as cur:
+            cur.execute(query, params)
+            cols = [c.name for c in cur.description]
+            transaksi_list += [dict(zip(cols, row)) for row in cur.fetchall()]
+
+        # Terima
+        query  = """
+            SELECT
+                t.timestamp,
+                t.email_member_2 AS email_member,
+                'Transfer Masuk' AS tipe,
+                CONCAT('Dari ', t.email_member_1,
+                       CASE WHEN t.catatan IS NOT NULL THEN CONCAT(' - ', t.catatan) ELSE '' END
+                ) AS keterangan,
+                t.jumlah AS miles
+            FROM transfer t
+            WHERE 1=1
+        """
+        params = []
+        if filter_email:
+            query  += " AND t.email_member_2 = %s"
+            params += [filter_email]
+        if filter_mulai:
+            query  += " AND t.timestamp >= %s"
+            params += [filter_mulai]
+        if filter_akhir:
+            query  += " AND t.timestamp <= %s"
+            params += [filter_akhir + ' 23:59:59']
+        with connection.cursor() as cur:
+            cur.execute(query, params)
+            cols = [c.name for c in cur.description]
+            transaksi_list += [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    # Urutkan semua transaksi dari terbaru
+    transaksi_list.sort(key=lambda x: x['timestamp'], reverse=True)
+
+    # ── Statistik ringkas ────────────────────────────────────
+    total_redeem   = sum(-t['miles'] for t in transaksi_list if t['tipe'] == 'Redeem')
+    total_package  = sum(t['miles']  for t in transaksi_list if t['tipe'] == 'Package')
+    total_transfer = sum(-t['miles'] for t in transaksi_list if t['tipe'] == 'Transfer Keluar')
+
+    return render(request, 'staf/laporan_transaksi.html', {
+        'transaksi_list' : transaksi_list,
+        'filter_tipe'    : filter_tipe,
+        'filter_mulai'   : filter_mulai,
+        'filter_akhir'   : filter_akhir,
+        'filter_email'   : filter_email,
+        'tipe_choices'   : ['Semua', 'Redeem', 'Package', 'Transfer'],
+        'total_redeem'   : total_redeem,
+        'total_package'  : total_package,
+        'total_transfer' : total_transfer,
+    })
+
+
+def _apply_filters(query: str, params: list, mulai: str, akhir: str, email: str):
+    """Tambahkan klausa WHERE umum (tanggal & email) ke query."""
+    if email:
+        query  += " AND r.email_member = %s" if 'r.email_member' in query else " AND mp.email_member = %s"
+        params += [email]
+    if mulai:
+        query  += " AND r.timestamp >= %s" if 'r.timestamp' in query else " AND mp.timestamp >= %s"
+        params += [mulai]
+    if akhir:
+        query  += " AND r.timestamp <= %s" if 'r.timestamp' in query else " AND mp.timestamp <= %s"
+        params += [akhir + ' 23:59:59']
+    return query, params
+
+
 def kelola_klaim_view(request):
     filter_status = request.GET.get('status', 'Semua')
     filter_maskapai = request.GET.get('maskapai', 'Semua')
@@ -362,27 +522,3 @@ def kelola_mitra_view(request):
 
     return render(request, 'staff/kelola_mitra.html', {'mitra_list': DUMMY_MITRA})
 
-
-def laporan_view(request):
-    filter_tipe = request.GET.get('tipe', 'Semua')
-    active_tab = request.GET.get('tab', 'riwayat')
-
-    transaksi = DUMMY_TRANSAKSI_LAPORAN
-    if filter_tipe != 'Semua':
-        transaksi = [t for t in transaksi if t['tipe'] == filter_tipe]
-
-    if request.method == 'POST':
-        action = request.POST.get('action')
-        if action == 'hapus_riwayat':
-            messages.warning(request, 'Riwayat transaksi berhasil dihapus secara permanen.')
-        return redirect('staff:laporan')
-
-    return render(request, 'staff/laporan.html', {
-        'transaksi': transaksi,
-        'top_members': DUMMY_TOP_MEMBERS,
-        'filter_tipe': filter_tipe,
-        'active_tab': active_tab,
-        'total_miles_beredar': 190000,
-        'total_redeem_bulan_ini': 3000,
-        'total_klaim_disetujui': 2500,
-    })
