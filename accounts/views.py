@@ -136,10 +136,13 @@ def register_view(request):
         salutation      = request.POST.get('salutation', '')
         first_mid_name  = request.POST.get('first_mid_name', '')
         last_name       = request.POST.get('last_name', '')
-        country_code    = request.POST.get('country_code') or None
-        mobile_number   = request.POST.get('mobile_number') or None
-        tanggal_lahir   = request.POST.get('tanggal_lahir') or None
-        kewarganegaraan = request.POST.get('kewarganegaraan') or None
+        country_code    = request.POST.get('country_code')
+        mobile_number   = request.POST.get('mobile_number')
+        tanggal_lahir   = request.POST.get('tanggal_lahir')
+        kewarganegaraan = request.POST.get('kewarganegaraan')
+        tanggal_lahir   = request.POST.get('tanggal_lahir')
+        if not tanggal_lahir:
+            tanggal_lahir = None
 
         with connection.cursor() as cur:
             # Insert ke pengguna
@@ -175,15 +178,12 @@ def register_view(request):
 
         messages.success(request, 'Akun berhasil dibuat! Silakan login.')
         return redirect('accounts:login')
-
     return render(request, 'accounts/register.html', {'maskapai_choices': MASKAPAI_CHOICES})
-
 
 def logout_view(request):
     request.session.flush()
-    messages.info(request, 'Anda telah logout.')
+    messages.success(request, 'Anda telah berhasil logout.')
     return redirect('accounts:login')
-
 
 def dashboard_view(request):
     if not request.session.get('role'):

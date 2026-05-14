@@ -54,7 +54,7 @@
         </div>
     </div>
 
-    <div id="modalTambahMitra" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div id="modalTambahMitra" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center z-50 transition-all">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
                 <h3 class="font-bold text-lg">Tambah Mitra Baru</h3>
@@ -76,14 +76,14 @@
                     <input type="date" name="tanggal_kerja_sama" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none">
                 </div>
                 <div class="pt-4 flex justify-end space-x-2">
-                    <button type="button" onclick="toggleModal('modalTambahMitra')" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-md">Batal</button>
-                    <button type="submit" class="px-4 py-2 text-sm font-medium bg-[#1a233a] text-white rounded-md hover:bg-[#0f1523]">Simpan</button>
+                    <button type="button" onclick="toggleModal('modalTambahMitra')" class="px-6 py-2.5 text-sm font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-all">Batal</button>
+                    <button type="submit" class="px-6 py-2.5 text-sm font-bold bg-[#253d66] text-white rounded-xl shadow-md hover:bg-[#1a2b49] transition-all">Simpan</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div id="modalEditMitra" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div id="modalEditMitra" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center z-50 transition-all">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
                 <h3 class="font-bold text-lg">Edit Mitra</h3>
@@ -105,26 +105,26 @@
                     <input type="date" name="tanggal_kerja_sama" id="edit_tanggal" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none">
                 </div>
                 <div class="pt-4 flex justify-end space-x-2">
-                    <button type="button" onclick="toggleModal('modalEditMitra')" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-md">Batal</button>
-                    <button type="submit" class="px-4 py-2 text-sm font-medium bg-[#1a233a] text-white rounded-md hover:bg-[#0f1523]">Simpan</button>
+                    <button type="button" onclick="toggleModal('modalEditMitra')" class="px-6 py-2.5 text-sm font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-all">Batal</button>
+                    <button type="submit" class="px-6 py-2.5 text-sm font-bold bg-[#253d66] text-white rounded-xl shadow-md hover:bg-[#1a2b49] transition-all">Simpan</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div id="modalHapusMitra" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div id="modalHapusMitra" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center z-50 transition-all">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden p-6 text-center">
-            <h3 class="font-bold text-xl text-gray-800 mb-2">Hapus Mitra?</h3>
+            <h3 class="font-bold text-xl text-[#d13232] mb-2">Hapus Mitra?</h3>
             <p class="text-sm text-gray-500 mb-6 px-4">Penghapusan mitra akan berpengaruh pada hadiah yang disediakan oleh mitra ini.</p>
             <form method="POST" class="flex justify-center space-x-3">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="hapus">
                 <input type="hidden" name="email_mitra" id="delete_email">
                 <input type="hidden" name="id_penyedia" id="delete_id">
-                <button type="button" onclick="toggleModal('modalHapusMitra')" class="px-6 py-2 text-sm font-bold text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition">
+                <button type="button" onclick="toggleModal('modalHapusMitra')" class="flex-1 py-3 px-6 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold rounded-xl transition-all border border-gray-200">
                     Batal
                 </button>
-                <button type="submit" class="px-6 py-2 text-sm font-bold bg-[#1a233a] text-white rounded-md hover:bg-[#0f1523] transition">
+                <button type="submit" class="flex-1 py-3 px-6 bg-[#d13232] hover:bg-[#b02a2a] text-white font-bold rounded-xl shadow-md transition-all">
                     Hapus
                 </button>
             </form>
@@ -135,20 +135,28 @@
 
 {% block extra_js %}
 <script>
-    function openEditModal(kode, nama, penyedia, miles, deskripsi, start, end) {
-        document.getElementById('edit_kode').value = kode;
-        document.getElementById('edit_nama').value = nama;
-        document.getElementById('edit_penyedia').value = penyedia;
-        document.getElementById('edit_miles').value = miles;
-        document.getElementById('edit_deskripsi').value = deskripsi;
-        document.getElementById('edit_start').value = start;
-        document.getElementById('edit_end').value = end;
-        toggleModal('modalEditHadiah');
+    function toggleModal(modalID) {
+        const modal = document.getElementById(modalID);
+        if (modal.classList.contains('hidden')) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        } else {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
     }
 
-    function openDeleteModal(kode) {
-        document.getElementById('delete_kode').value = kode;
-        toggleModal('modalHapusHadiah');
+    function openEditModal(email, nama, tanggal) {
+        document.getElementById('edit_email').value = email;
+        document.getElementById('edit_nama').value = nama;
+        document.getElementById('edit_tanggal').value = tanggal;
+        toggleModal('modalEditMitra');
+    }
+
+    function openDeleteModal(email, id_penyedia) {
+        document.getElementById('delete_email').value = email;
+        document.getElementById('delete_id').value = id_penyedia;
+        toggleModal('modalHapusMitra');
     }
 </script>
 {% endblock extra_js %}

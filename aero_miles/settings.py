@@ -17,10 +17,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -83,10 +80,14 @@ WSGI_APPLICATION = 'aero_miles.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
-        conn_max_age=600
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'postgres',
+        'USER': 'postgres',
+        'PASSWORD': 'alyaaulyacathray',
+        'HOST': 'db.nxhpnnhusuzcernjeebu.supabase.co',
+        'PORT': '5432',
+    }
 }
 
 # Password validation
