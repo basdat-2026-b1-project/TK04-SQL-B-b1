@@ -112,10 +112,12 @@ def claim_list(request):
             try:
                 with connection.cursor() as cursor:
                     cursor.execute("""
-                        INSERT INTO claim_missing_miles (email_member, maskapai, bandara_asal, bandara_tujuan, tanggal_penerbangan, flight_number, nomor_tiket, kelas_kabin, pnr, status_penerimaan)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'Menunggu')
-                    """, [email, maskapai, asal, tujuan, tanggal, flight_number, nomor_tiket, kelas, pnr])
-                messages.success(request, f'Klaim untuk penerbangan {flight_number} ({asal} - {tujuan}) berhasil diajukan.')
+                        INSERT INTO claim_missing_miles 
+                        (email_member, maskapai, bandara_asal, bandara_tujuan, tanggal_penerbangan, flight_number, nomor_tiket, pnr, kelas_kabin, status_penerimaan, timestamp)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'Menunggu', CURRENT_TIMESTAMP)
+                    """, [email, maskapai, asal, tujuan, tanggal, flight_number, nomor_tiket, pnr, kelas])
+                    
+                messages.success(request, 'Klaim berhasil diajukan!')
             except Exception as e:
                 messages.error(request, f'Gagal mengajukan klaim: {str(e)}')
             return redirect('member:claim_list')
@@ -258,16 +260,17 @@ def transfer_view(request):
         'email_session': email
     })
 
-
 @login_required_member
 def dashboard(request):
     email = request.session.get('email')
     
     with connection.cursor() as cursor:
         cursor.execute("""
-            SELECT p.first_mid_name || ' ' || p.last_name AS nama, p.nomor_hp AS telepon, 
-                   p.warga_negara AS kewarganegaraan, p.tanggal_lahir, 
-                   m.award_miles, m.total_miles, t.nama AS tier_nama
+            SELECT p.first_mid_name || ' ' || p.last_name AS nama, 
+                p.mobile_number AS telepon, 
+                p.kewarganegaraan AS kewarganegaraan, 
+                p.tanggal_lahir, 
+                m.award_miles, m.total_miles, t.nama AS tier_nama
             FROM member m 
             JOIN pengguna p ON m.email = p.email 
             JOIN tier t ON m.id_tier = t.id_tier

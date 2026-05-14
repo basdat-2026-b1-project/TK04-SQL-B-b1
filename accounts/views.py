@@ -1,91 +1,105 @@
-from urllib import request
-
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.shortcuts import render, redirect
 from django.db import connection
 from django.contrib.auth.hashers import check_password, make_password
-from .models import Pengguna, Member, Staf, Maskapai
+from .models import Pengguna, Member, Staf
 from datetime import date
 
-DUMMY_USERS = {
-    'john@example.com': {
-        'password': 'password123',
-        'role': 'member',
-        'salutation': 'Mr.',
-        'nama': 'John William Doe',
-        'first_mid_name': 'John William',
-        'last_name': 'Doe',
-        'country_code': '+62',
-        'mobile_number': '81234567890',
-        'tanggal_lahir': '1990-05-15',
-        'kewarganegaraan': 'Indonesia',
-        'nomor_member': 'M0001',
-        'tanggal_bergabung': '2024-01-15',
-        'tier': 'Gold',
-        'total_miles': 45000,
-        'award_miles': 32000,
-    },
-    'admin@aeromiles.com': {
-        'password': 'admin123',
-        'role': 'staf',
-        'salutation': 'Mr.',
-        'nama': 'Admin Aero',
-        'first_mid_name': 'Admin',
-        'last_name': 'Aero',
-        'country_code': '+62',
-        'mobile_number': '81111111111',
-        'tanggal_lahir': '1988-01-01',
-        'kewarganegaraan': 'Indonesia',
-        'id_staf': 'S0001',
-        'maskapai': 'Garuda Indonesia',
-        'kode_maskapai': 'GA',
-    },
-}
-
-DUMMY_TRANSAKSI_TERBARU = [
-    {'tipe': 'Transfer', 'timestamp': '2025-01-15 10:30', 'jumlah': -5000},
-    {'tipe': 'Redeem', 'timestamp': '2025-01-20 16:00', 'jumlah': -3000},
-    {'tipe': 'Package', 'timestamp': '2025-03-01 08:00', 'jumlah': 10000},
-    {'tipe': 'Klaim', 'timestamp': '2024-10-05 18:45', 'jumlah': 2500},
-    {'tipe': 'Transfer', 'timestamp': '2024-12-10 14:00', 'jumlah': 2000},
-]
 
 def landing_page(request):
     return render(request, 'base.html')
 
+
 def login_view(request):
-    # cek jika user sudah login sebelumnya
     if request.session.get('role'):
         if request.session.get('role') == 'member':
-            return redirect('/member/dashboard/') # sesuaikan dengan nama path urls.py per role, misal: redirect('member:dashboard')
+            return redirect('/member/dashboard/')
         elif request.session.get('role') == 'staf':
             return redirect('/staff/dashboard/')
 
     if request.method == 'POST':
-        email = request.POST.get('email', '').strip()
+        email    = request.POST.get('email', '').strip()
         password = request.POST.get('password', '')
 
-        user = DUMMY_USERS.get(email)
-        if user and user['password'] == password:
+        # Ambil data pengguna dari DB
+        with connection.cursor() as cur:
+            cur.execute("""
+                SELECT email, password, salutation, first_mid_name, last_name,
+                       country_code, mobile_number, tanggal_lahir, kewarganegaraan
+                FROM pengguna
+                WHERE email = %s
+            """, [email])
+            row = cur.fetchone()
 
-            request.session['email'] = email
-            request.session['role'] = user['role']
-            request.session['salutation'] = user['salutation']
-            request.session['nama'] = user['nama']
-
-            for k, v in user.items():
-                if k != 'password':
-                    request.session[k] = v
-            messages.success(request, f"Selamat datang, {user['salutation']} {user['nama']}!")
-            
-            # 2. Ubah bagian redirect setelah POST login berhasil
-            if user['role'] == 'member':
-                return redirect('/member/dashboard/') 
-            elif user['role'] == 'staf':
-                return redirect('/staff/dashboard/')
-        else:
+        if not row:
             messages.error(request, 'Email atau password salah. Silakan coba lagi.')
+            return render(request, 'accounts/login.html')
+
+        (db_email, db_password, salutation, first_mid_name, last_name,
+         country_code, mobile_number, tanggal_lahir, kewarganegaraan) = row
+
+        # Cek password (support hashed maupun plaintext sementara)
+        password_valid = check_password(password, db_password)
+
+        if not password_valid:
+            messages.error(request, 'Email atau password salah. Silakan coba lagi.')
+            return render(request, 'accounts/login.html')
+
+        # Set session dasar
+        request.session['email']          = db_email
+        request.session['salutation']     = salutation
+        request.session['first_mid_name'] = first_mid_name
+        request.session['last_name']      = last_name
+        request.session['nama']           = f"{first_mid_name} {last_name}"
+        request.session['country_code']   = country_code
+        request.session['mobile_number']  = mobile_number
+        request.session['tanggal_lahir']  = str(tanggal_lahir)
+        request.session['kewarganegaraan']= kewarganegaraan
+
+        # Cek apakah member
+        with connection.cursor() as cur:
+            cur.execute("""
+                SELECT m.nomor_member, m.tanggal_bergabung, m.id_tier,
+                       m.award_miles, m.total_miles, t.nama
+                FROM member m
+                JOIN tier t ON t.id_tier = m.id_tier
+                WHERE m.email = %s
+            """, [email])
+            member_row = cur.fetchone()
+
+        if member_row:
+            request.session['role']              = 'member'
+            request.session['nomor_member']      = member_row[0]
+            request.session['tanggal_bergabung'] = str(member_row[1])
+            request.session['id_tier']           = member_row[2]
+            request.session['award_miles']       = member_row[3]
+            request.session['total_miles']       = member_row[4]
+            request.session['tier']              = member_row[5]
+
+            messages.success(request, f"Selamat datang, {salutation} {first_mid_name} {last_name}!")
+            return redirect('/member/dashboard/')
+
+        # Cek apakah staf
+        with connection.cursor() as cur:
+            cur.execute("""
+                SELECT s.id_staf, s.kode_maskapai, mk.nama_maskapai
+                FROM staf s
+                JOIN maskapai mk ON mk.kode_maskapai = s.kode_maskapai
+                WHERE s.email = %s
+            """, [email])
+            staf_row = cur.fetchone()
+
+        if staf_row:
+            request.session['role']          = 'staf'
+            request.session['id_staf']       = staf_row[0]
+            request.session['kode_maskapai'] = staf_row[1]
+            request.session['maskapai']      = staf_row[2]
+
+            messages.success(request, f"Selamat datang, {salutation} {first_mid_name} {last_name}!")
+            return redirect('/staff/dashboard/')
+
+        # Email ada di pengguna tapi bukan member/staf
+        messages.error(request, 'Akun tidak memiliki role yang valid.')
 
     return render(request, 'accounts/login.html')
 
@@ -103,36 +117,73 @@ def register_view(request):
     ]
 
     if request.method == 'POST':
-        role = request.POST.get('role', 'member')
-        email = request.POST.get('email', '').strip()
-        password = request.POST.get('password', '')
-        tanggal_bergabung = date.today()
-        
-        # validate
+        role       = request.POST.get('role', 'member')
+        email      = request.POST.get('email', '').strip()
+        password   = request.POST.get('password', '')
+
         if not email:
             messages.error(request, 'Email tidak boleh kosong.')
-        elif email in DUMMY_USERS:
-            messages.error(request, 'Email sudah terdaftar.')
-        else:
-            # simpan data dummy baru ke dalam dictionary, data selain dummy data
-            DUMMY_USERS[email] = {
-                'password': password,
-                'role': role,
-                'salutation': request.POST.get('salutation', ''),
-                'nama': request.POST.get('nama_depan', '') + ' ' + request.POST.get('nama_belakang', ''),
-            }
-            messages.success(request, 'Akun berhasil dibuat! Silakan login.')
-            return redirect('accounts:login')
+            return render(request, 'accounts/register.html', {'maskapai_choices': MASKAPAI_CHOICES})
 
-    # dijalankan saat halaman pertama kali dibuka (GET request)
+        # Cek apakah email sudah ada
+        with connection.cursor() as cur:
+            cur.execute("SELECT email FROM pengguna WHERE email = %s", [email])
+            if cur.fetchone():
+                messages.error(request, 'Email sudah terdaftar.')
+                return render(request, 'accounts/register.html', {'maskapai_choices': MASKAPAI_CHOICES})
+
+        hashed_password = make_password(password)
+        salutation      = request.POST.get('salutation', '')
+        first_mid_name  = request.POST.get('first_mid_name', '')
+        last_name       = request.POST.get('last_name', '')
+        country_code    = request.POST.get('country_code')
+        mobile_number   = request.POST.get('mobile_number')
+        tanggal_lahir   = request.POST.get('tanggal_lahir')
+        kewarganegaraan = request.POST.get('kewarganegaraan')
+        tanggal_lahir   = request.POST.get('tanggal_lahir')
+        if not tanggal_lahir:
+            tanggal_lahir = None
+
+        with connection.cursor() as cur:
+            # Insert ke pengguna
+            cur.execute("""
+                INSERT INTO pengguna (
+                    email, password, salutation, first_mid_name, last_name,
+                    country_code, mobile_number, tanggal_lahir, kewarganegaraan
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, [email, hashed_password, salutation, first_mid_name, last_name,
+                  country_code, mobile_number, tanggal_lahir, kewarganegaraan])
+
+            if role == 'member':
+                # Generate nomor member
+                cur.execute("SELECT COUNT(*) FROM member")
+                count        = cur.fetchone()[0]
+                nomor_member = f"M{count + 1:04d}"
+
+                cur.execute("""
+                    INSERT INTO member (email, nomor_member, tanggal_bergabung, id_tier, award_miles, total_miles)
+                    VALUES (%s, %s, %s, 'T01', 0, 0)
+                """, [email, nomor_member, date.today()])
+
+            elif role == 'staf':
+                kode_maskapai = request.POST.get('kode_maskapai', '')
+                cur.execute("SELECT COUNT(*) FROM staf")
+                count   = cur.fetchone()[0]
+                id_staf = f"S{count + 1:04d}"
+
+                cur.execute("""
+                    INSERT INTO staf (email, id_staf, kode_maskapai)
+                    VALUES (%s, %s, %s)
+                """, [email, id_staf, kode_maskapai])
+
+        messages.success(request, 'Akun berhasil dibuat! Silakan login.')
+        return redirect('accounts:login')
     return render(request, 'accounts/register.html', {'maskapai_choices': MASKAPAI_CHOICES})
-
 
 def logout_view(request):
     request.session.flush()
-    messages.info(request, 'Anda telah logout.')
+    messages.success(request, 'Anda telah berhasil logout.')
     return redirect('accounts:login')
-
 
 def dashboard_view(request):
     if not request.session.get('role'):
@@ -141,16 +192,11 @@ def dashboard_view(request):
     role = request.session.get('role')
 
     if role == 'member':
-        context = {
-            'transaksi_terbaru': DUMMY_TRANSAKSI_TERBARU,
-        }
-    else:  # staf
-        context = {
-            'klaim_menunggu': 7,
-            'klaim_disetujui': 12,
-            'klaim_ditolak': 3,
-        }
-    return render(request, 'dashboard.html', context)
+        return redirect('/member/dashboard/')
+    elif role == 'staf':
+        return redirect('/staff/dashboard/')
+
+    return redirect('accounts:login')
 
 
 def profile_view(request):
@@ -160,19 +206,19 @@ def profile_view(request):
     role = request.session.get('role')
 
     context = {
-        'email': request.session.get('email', ''),
-        'role': role,
-        'salutation': request.session.get('salutation', ''),
-        'first_mid_name': request.session.get('first_mid_name', ''),
-        'last_name': request.session.get('last_name', ''),
-        'country_code': request.session.get('country_code', ''),
-        'mobile_number': request.session.get('mobile_number', ''),
-        'tanggal_lahir': request.session.get('tanggal_lahir', ''),
+        'email'          : request.session.get('email', ''),
+        'role'           : role,
+        'salutation'     : request.session.get('salutation', ''),
+        'first_mid_name' : request.session.get('first_mid_name', ''),
+        'last_name'      : request.session.get('last_name', ''),
+        'country_code'   : request.session.get('country_code', ''),
+        'mobile_number'  : request.session.get('mobile_number', ''),
+        'tanggal_lahir'  : request.session.get('tanggal_lahir', ''),
         'kewarganegaraan': request.session.get('kewarganegaraan', ''),
-        'nomor_member': request.session.get('nomor_member', ''),
+        'nomor_member'   : request.session.get('nomor_member', ''),
         'tanggal_bergabung': request.session.get('tanggal_bergabung', ''),
-        'id_staf': request.session.get('id_staf', ''),
-        'kode_maskapai': request.session.get('kode_maskapai', ''),
+        'id_staf'        : request.session.get('id_staf', ''),
+        'kode_maskapai'  : request.session.get('kode_maskapai', ''),
         'maskapai_choices': [
             ('GA', 'Garuda Indonesia'),
             ('QG', 'Citilink'),
@@ -182,39 +228,60 @@ def profile_view(request):
         ],
     }
 
-    if request.session.get('role') == 'member':
-        context['nomor_member'] = request.session.get('nomor_member', '')
-        context['tanggal_bergabung'] = request.session.get('tanggal_bergabung', '')
+    if role == 'member':
         return render(request, 'profile_member.html', context)
-
-    if role == 'staf':
-        context['id_staf'] = request.session.get('id_staf', '')
-        context['kode_maskapai'] = request.session.get('kode_maskapai', '')
+    elif role == 'staf':
         return render(request, 'profile_staff.html', context)
 
     return redirect('accounts:dashboard')
+
 
 def update_profile(request):
     if not request.session.get('role'):
         return redirect('accounts:login')
 
     if request.method == 'POST':
-        request.session['salutation'] = request.POST.get('salutation', '')
-        request.session['first_mid_name'] = request.POST.get('first_mid_name', '')
-        request.session['last_name'] = request.POST.get('last_name', '')
-        request.session['kewarganegaraan'] = request.POST.get('kewarganegaraan', '')
-        request.session['country_code'] = request.POST.get('country_code', '')
-        request.session['mobile_number'] = request.POST.get('mobile_number', '')
-        request.session['tanggal_lahir'] = request.POST.get('tanggal_lahir', '')
+        email           = request.session.get('email')
+        salutation      = request.POST.get('salutation', '')
+        first_mid_name  = request.POST.get('first_mid_name', '')
+        last_name       = request.POST.get('last_name', '')
+        kewarganegaraan = request.POST.get('kewarganegaraan', '')
+        country_code    = request.POST.get('country_code', '')
+        mobile_number   = request.POST.get('mobile_number', '')
+        tanggal_lahir   = request.POST.get('tanggal_lahir', '')
 
-        if request.session.get('role') == 'staf':
-            request.session['kode_maskapai'] = request.POST.get('kode_maskapai', '')
+        with connection.cursor() as cur:
+            cur.execute("""
+                UPDATE pengguna
+                SET salutation = %s, first_mid_name = %s, last_name = %s,
+                    kewarganegaraan = %s, country_code = %s,
+                    mobile_number = %s, tanggal_lahir = %s
+                WHERE email = %s
+            """, [salutation, first_mid_name, last_name, kewarganegaraan,
+                  country_code, mobile_number, tanggal_lahir, email])
 
-        request.session['nama'] = (
-            request.session['first_mid_name'] + ' ' + request.session['last_name']
-        )
+            if request.session.get('role') == 'staf':
+                kode_maskapai = request.POST.get('kode_maskapai', '')
+                cur.execute(
+                    "UPDATE staf SET kode_maskapai = %s WHERE email = %s",
+                    [kode_maskapai, email]
+                )
+                request.session['kode_maskapai'] = kode_maskapai
+
+        # Sync session
+        request.session['salutation']      = salutation
+        request.session['first_mid_name']  = first_mid_name
+        request.session['last_name']       = last_name
+        request.session['nama']            = f"{first_mid_name} {last_name}"
+        request.session['kewarganegaraan'] = kewarganegaraan
+        request.session['country_code']    = country_code
+        request.session['mobile_number']   = mobile_number
+        request.session['tanggal_lahir']   = tanggal_lahir
+
+        messages.success(request, 'Profil berhasil diperbarui.')
 
     return redirect('accounts:profile')
+
 
 def update_profile_photo(request):
     if not request.session.get('role'):
@@ -233,26 +300,32 @@ def update_password(request):
     if request.method != 'POST':
         return redirect('accounts:profile')
 
-    email = request.session.get('email')
-    password_lama = request.POST.get('password_lama', '')
-    password_baru = request.POST.get('password_baru', '')
+    email             = request.session.get('email')
+    password_lama     = request.POST.get('password_lama', '')
+    password_baru     = request.POST.get('password_baru', '')
     konfirmasi_password = request.POST.get('konfirmasi_password_baru', '')
 
-    try:
-        pengguna = Pengguna.objects.get(email=email)
-    except Pengguna.DoesNotExist:
+    with connection.cursor() as cur:
+        cur.execute("SELECT password FROM pengguna WHERE email = %s", [email])
+        row = cur.fetchone()
+
+    if not row:
         messages.error(request, 'Data pengguna tidak ditemukan.')
         return redirect('accounts:profile')
 
-    if not check_password(password_lama, pengguna.password):
+    if not check_password(password_lama, row[0]):
         messages.error(request, 'Password lama tidak sesuai.')
     elif password_baru != konfirmasi_password:
         messages.error(request, 'Konfirmasi password baru tidak cocok.')
     elif len(password_baru) < 8:
         messages.error(request, 'Password baru minimal 8 karakter.')
     else:
-        pengguna.password = make_password(password_baru)
-        pengguna.save()
+        hashed = make_password(password_baru)
+        with connection.cursor() as cur:
+            cur.execute(
+                "UPDATE pengguna SET password = %s WHERE email = %s",
+                [hashed, email]
+            )
         messages.success(request, 'Password berhasil diubah.')
 
     return redirect('accounts:profile')

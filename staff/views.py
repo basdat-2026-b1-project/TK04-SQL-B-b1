@@ -186,74 +186,6 @@ def dashboard(request):
 
     return render(request, 'staff/dashboard.html', context)
 
-@login_required_staf
-def laporan_transaksi_view(request):
-    active_tab = request.GET.get('tab', 'riwayat')
-    filter_tipe = request.GET.get('tipe', 'Semua')
-
-    if request.method == 'POST':
-        pass
-
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT COALESCE(SUM(total_miles), 0) FROM member")
-        total_miles_beredar = cursor.fetchone()[0]
-
-        cursor.execute("SELECT COALESCE(SUM(h.miles), 0) FROM redeem r JOIN hadiah h ON r.kode_hadiah = h.kode_hadiah WHERE EXTRACT(MONTH FROM r.timestamp) = EXTRACT(MONTH FROM CURRENT_DATE)")
-        total_redeem_bulan_ini = cursor.fetchone()[0]
-
-        cursor.execute("SELECT COUNT(*) FROM claim_missing_miles WHERE status_penerimaan = 'Disetujui'")
-        total_klaim_disetujui = cursor.fetchone()[0]
-
-        query = """
-            SELECT tipe, email, member, jumlah, timestamp FROM (
-                SELECT 'Transfer' AS tipe, t.email_member_1 AS email, p1.first_mid_name || ' ' || p1.last_name AS member, -t.jumlah AS jumlah, t.timestamp 
-                FROM transfer t JOIN pengguna p1 ON t.email_member_1 = p1.email
-                UNION ALL
-                SELECT 'Redeem' AS tipe, r.email_member AS email, p2.first_mid_name || ' ' || p2.last_name AS member, -h.miles AS jumlah, r.timestamp 
-                FROM redeem r JOIN hadiah h ON r.kode_hadiah = h.kode_hadiah JOIN pengguna p2 ON r.email_member = p2.email
-                UNION ALL
-                SELECT 'Package' AS tipe, mp.email_member AS email, p3.first_mid_name || ' ' || p3.last_name AS member, pkg.jumlah_award_miles AS jumlah, mp.timestamp 
-                FROM member_award_miles_package mp JOIN award_miles_package pkg ON mp.id_award_miles_package = pkg.id JOIN pengguna p3 ON mp.email_member = p3.email
-            ) t
-            WHERE 1=1
-        """
-        params = []
-        if filter_tipe != 'Semua' and filter_tipe != 'Klaim':
-            query += " AND tipe = %s"
-            params.append(filter_tipe)
-            
-        query += " ORDER BY timestamp DESC"
-        cursor.execute(query, params)
-        cols = [col[0] for col in cursor.description]
-        transaksi = [dict(zip(cols, row)) for row in cursor.fetchall()]
-
-        cursor.execute("""
-            SELECT 
-                p.first_mid_name || ' ' || p.last_name AS member,
-                m.email,
-                m.total_miles,
-                (SELECT COUNT(*) FROM transfer WHERE email_member_1 = m.email OR email_member_2 = m.email) +
-                (SELECT COUNT(*) FROM redeem WHERE email_member = m.email) +
-                (SELECT COUNT(*) FROM member_award_miles_package WHERE email_member = m.email) AS jumlah_transaksi
-            FROM member m
-            JOIN pengguna p ON m.email = p.email
-            ORDER BY m.total_miles DESC
-            LIMIT 3
-        """)
-        cols = [col[0] for col in cursor.description]
-        top_members = [dict(zip(cols, row)) for row in cursor.fetchall()]
-
-    return render(request, 'staff/laporan.html', {
-        'total_miles_beredar': total_miles_beredar,
-        'total_redeem_bulan_ini': total_redeem_bulan_ini,
-        'total_klaim_disetujui': total_klaim_disetujui,
-        'active_tab': active_tab,
-        'filter_tipe': filter_tipe,
-        'transaksi': transaksi,
-        'top_members': top_members,
-    })
-
-
 def _apply_filters(query: str, params: list, mulai: str, akhir: str, email: str):
     """Tambahkan klausa WHERE umum (tanggal & email) ke query."""
     if email:
@@ -466,3 +398,177 @@ def kelola_mitra_view(request):
         mitra_list = [dict(zip(cols, row)) for row in cursor.fetchall()]
 
     return render(request, 'staff/kelola_mitra.html', {'mitra_list': mitra_list})
+
+
+def login_required_staf(view_func):
+    def wrapper(request, *args, **kwargs):
+        if not request.session.get('role'):
+            return redirect('accounts:login')
+        if request.session.get('role') != 'staf':
+            return redirect('accounts:dashboard')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+@login_required_staf
+def laporan_view(request):
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'hapus_riwayat':
+            hapus_tipe = request.POST.get('hapus_tipe')
+            hapus_email = request.POST.get('hapus_email')
+            hapus_timestamp = request.POST.get('hapus_timestamp')
+            
+            try:
+                with connection.cursor() as cur:
+                    if hapus_tipe == 'Redeem':
+                        cur.execute("DELETE FROM redeem WHERE email_member = %s AND timestamp = %s", [hapus_email, hapus_timestamp])
+                    elif hapus_tipe == 'Package':
+                        cur.execute("DELETE FROM member_award_miles_package WHERE email_member = %s AND timestamp = %s", [hapus_email, hapus_timestamp])
+                    elif hapus_tipe == 'Transfer':
+                        cur.execute("DELETE FROM transfer WHERE email_member_1 = %s AND timestamp = %s", [hapus_email, hapus_timestamp])
+                    elif hapus_tipe == 'Klaim':
+                        cur.execute("DELETE FROM claim_missing_miles WHERE email_member = %s AND timestamp = %s", [hapus_email, hapus_timestamp])
+                
+                messages.success(request, f'Riwayat {hapus_tipe} berhasil dihapus.')
+            except Exception as e:
+                messages.error(request, f'Gagal menghapus riwayat: {str(e)}')
+            
+            return redirect('staff:laporan')
+
+    filter_tipe = request.GET.get('tipe', 'Semua')
+    active_tab  = request.GET.get('tab', 'riwayat')
+
+    transaksi = []
+
+    # ── Redeem ───────────────────────────────────────────────
+    if filter_tipe in ('Semua', 'Redeem'):
+        with connection.cursor() as cur:
+            cur.execute("""
+                SELECT
+                    r.timestamp,
+                    p.first_mid_name || ' ' || p.last_name AS member,
+                    r.email_member                          AS email,
+                    'Redeem'                                AS tipe,
+                    -h.miles                                AS jumlah
+                FROM redeem r
+                JOIN hadiah h   ON h.kode_hadiah = r.kode_hadiah
+                JOIN pengguna p ON p.email = r.email_member
+                ORDER BY r.timestamp DESC
+            """)
+            cols = [c.name for c in cur.description]
+            transaksi += [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    # ── Package ──────────────────────────────────────────────
+    if filter_tipe in ('Semua', 'Package'):
+        with connection.cursor() as cur:
+            cur.execute("""
+                SELECT
+                    mp.timestamp,
+                    p.first_mid_name || ' ' || p.last_name AS member,
+                    mp.email_member                         AS email,
+                    'Package'                               AS tipe,
+                    ap.jumlah_award_miles                   AS jumlah
+                FROM member_award_miles_package mp
+                JOIN award_miles_package ap ON ap.id = mp.id_award_miles_package
+                JOIN pengguna p             ON p.email = mp.email_member
+                ORDER BY mp.timestamp DESC
+            """)
+            cols = [c.name for c in cur.description]
+            transaksi += [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    # ── Transfer ─────────────────────────────────────────────
+    if filter_tipe in ('Semua', 'Transfer'):
+        with connection.cursor() as cur:
+            cur.execute("""
+                SELECT
+                    t.timestamp,
+                    p.first_mid_name || ' ' || p.last_name AS member,
+                    t.email_member_1                        AS email,
+                    'Transfer'                              AS tipe,
+                    -t.jumlah                               AS jumlah
+                FROM transfer t
+                JOIN pengguna p ON p.email = t.email_member_1
+                ORDER BY t.timestamp DESC
+            """)
+            cols = [c.name for c in cur.description]
+            transaksi += [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    # ── Klaim ────────────────────────────────────────────────
+    if filter_tipe in ('Semua', 'Klaim'):
+        with connection.cursor() as cur:
+            cur.execute("""
+                SELECT
+                    c.timestamp,
+                    p.first_mid_name || ' ' || p.last_name AS member,
+                    c.email_member                          AS email,
+                    'Klaim'                                 AS tipe,
+                    0                                       AS jumlah
+                FROM claim_missing_miles c
+                JOIN pengguna p ON p.email = c.email_member
+                ORDER BY c.timestamp DESC
+            """)
+            cols = [c.name for c in cur.description]
+            transaksi += [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    # Urutkan semua dari terbaru
+    transaksi.sort(key=lambda x: x['timestamp'], reverse=True)
+
+    # ── Stat cards ───────────────────────────────────────────
+    # Total miles beredar = sum award_miles semua member
+    with connection.cursor() as cur:
+        cur.execute("SELECT COALESCE(SUM(award_miles), 0) FROM member")
+        total_miles_beredar = cur.fetchone()[0]
+
+    # Total redeem bulan ini (dalam miles)
+    today = date.today()
+    with connection.cursor() as cur:
+        cur.execute("""
+            SELECT COALESCE(SUM(h.miles), 0)
+            FROM redeem r
+            JOIN hadiah h ON h.kode_hadiah = r.kode_hadiah
+            WHERE EXTRACT(MONTH FROM r.timestamp) = %s
+              AND EXTRACT(YEAR  FROM r.timestamp) = %s
+        """, [today.month, today.year])
+        total_redeem_bulan_ini = cur.fetchone()[0]
+
+    # Total klaim disetujui
+    with connection.cursor() as cur:
+        cur.execute(
+            "SELECT COUNT(*) FROM claim_missing_miles WHERE status_penerimaan = 'Disetujui'"
+        )
+        total_klaim_disetujui = cur.fetchone()[0]
+
+    with connection.cursor() as cur:
+        cur.execute("""
+            SELECT
+                p.first_mid_name || ' ' || p.last_name AS member,
+                m.total_miles,
+                (
+                    SELECT COUNT(*) FROM redeem r   WHERE r.email_member = m.email
+                ) +
+                (
+                    SELECT COUNT(*) FROM member_award_miles_package mp WHERE mp.email_member = m.email
+                ) +
+                (
+                    SELECT COUNT(*) FROM transfer t
+                    WHERE t.email_member_1 = m.email OR t.email_member_2 = m.email
+                ) AS jumlah_transaksi
+            FROM member m
+            JOIN pengguna p ON p.email = m.email
+            ORDER BY m.total_miles DESC
+            LIMIT 10
+        """)
+        cols        = [c.name for c in cur.description]
+        top_members = [dict(zip(cols, row)) for row in cur.fetchall()]
+
+    return render(request, 'staff/laporan.html', {
+        'transaksi'             : transaksi,
+        'filter_tipe'           : filter_tipe,
+        'active_tab'            : active_tab,
+        'total_miles_beredar'   : total_miles_beredar,
+        'total_redeem_bulan_ini': total_redeem_bulan_ini,
+        'total_klaim_disetujui' : total_klaim_disetujui,
+        'top_members'           : top_members,
+    })

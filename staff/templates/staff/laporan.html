@@ -86,7 +86,7 @@
                             </td>
                             <td class="px-6 py-4 text-gray-400 text-xs font-medium">{{ t.timestamp }}</td>
                             <td class="px-6 py-4 text-center">
-                                <button onclick="bukaModalHapus('{{ t.member }}')" class="action-btn">
+                                <button onclick="bukaModalHapus('{{ t.member|default:t.email|escapejs }}', '{{ t.tipe }}', '{{ t.email }}', '{{ t.timestamp|date:'Y-m-d H:i:s.u' }}')" class="action-btn">
                                     <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                 </button>
                             </td>
@@ -135,6 +135,9 @@
             <form method="POST" action="">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="hapus_riwayat">
+                <input type="hidden" name="hapus_tipe" id="input_hapus_tipe">
+                <input type="hidden" name="hapus_email" id="input_hapus_email">
+                <input type="hidden" name="hapus_timestamp" id="input_hapus_timestamp">
                 <div class="flex space-x-3 mt-8">
                     <button type="button" onclick="tutupModalHapus()" class="flex-1 py-3 px-6 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold rounded-xl transition-all border border-gray-200">
                         Batal
@@ -170,8 +173,11 @@
             }
         }
 
-        function bukaModalHapus(name) {
+        function bukaModalHapus(name, tipe, email, timestamp) {
             document.getElementById('targetName').innerText = name;
+            document.getElementById('input_hapus_tipe').value = tipe;
+            document.getElementById('input_hapus_email').value = email;
+            document.getElementById('input_hapus_timestamp').value = timestamp;
             document.getElementById('modalHapus').classList.remove('hidden');
         }
 
