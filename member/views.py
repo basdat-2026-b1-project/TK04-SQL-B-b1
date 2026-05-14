@@ -5,7 +5,7 @@ from datetime import date
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.utils import timezone
-from django.db import connection
+from django.db import connection, transaction
 from datetime import date
 
 DUMMY_IDENTITAS = [
