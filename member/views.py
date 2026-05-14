@@ -162,7 +162,8 @@ def claim_list(request):
 
     with connection.cursor() as cursor:
         query = """
-            SELECT id, maskapai, bandara_asal, bandara_tujuan, bandara_asal || ' → ' || bandara_tujuan AS rute, 
+            SELECT id, maskapai, bandara_asal AS asal, bandara_tujuan AS tujuan, bandara_asal || ' → ' || bandara_tujuan AS rute, 
+                   tanggal_penerbangan AS tanggal_raw,
                    tanggal_penerbangan AS tanggal, flight_number AS flight, kelas_kabin AS kelas, nomor_tiket, pnr,
                    status_penerimaan AS status, timestamp
             FROM claim_missing_miles

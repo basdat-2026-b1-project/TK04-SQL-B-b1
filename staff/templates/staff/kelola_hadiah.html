@@ -47,7 +47,7 @@
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 text-right flex justify-end space-x-3">
-                            <button onclick="openEditModal('{{ hadiah.kode }}', '{{ hadiah.nama }}', '{{ hadiah.penyedia }}', '{{ hadiah.miles }}', '{{ hadiah.deskripsi }}', '{{ hadiah.valid_start }}', '{{ hadiah.program_end }}')" 
+                            <button onclick="openEditModal('{{ hadiah.kode|escapejs }}', '{{ hadiah.nama|escapejs }}', '{{ hadiah.id_penyedia }}', '{{ hadiah.miles }}', '{{ hadiah.deskripsi|escapejs }}', '{{ hadiah.valid_start|date:"Y-m-d" }}', '{{ hadiah.program_end|date:"Y-m-d" }}')" 
                                     class="text-blue-500 hover:text-blue-700 font-medium text-sm flex items-center transition">
                                 <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
@@ -69,7 +69,7 @@
         </div>
     </div>
 
-    <div id="modalHadiah" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div id="modalHadiah" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center z-50 transition-all">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                 <h3 class="font-bold text-lg">Buat Reward Baru</h3>
@@ -90,7 +90,7 @@
                         <select name="penyedia_name" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none bg-white">
                             <option value="">Pilih...</option>
                             {% for val, label in penyedia_choices %}
-                            <option value="{{ label }}">{{ label }}</option>
+                            <option value="{{ val }}">{{ label }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -117,14 +117,14 @@
                 </div>
 
                 <div class="pt-4 flex justify-end space-x-2">
-                    <button type="button" onclick="toggleModal('modalHadiah')" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-md">Batal</button>
-                    <button type="submit" class="px-4 py-2 text-sm font-medium bg-[#3a5a9c] text-white rounded-md hover:bg-[#2c457a]">Simpan Hadiah</button>
+                    <button type="button" onclick="toggleModal('modalHadiah')" class="px-6 py-2.5 text-sm font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-all">Batal</button>
+                    <button type="submit" class="px-6 py-2.5 text-sm font-bold bg-[#253d66] text-white rounded-xl shadow-md hover:bg-[#1a2b49] transition-all">Simpan Hadiah</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div id="modalEditHadiah" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div id="modalEditHadiah" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center z-50 transition-all">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                 <h3 class="font-bold text-lg">Edit Hadiah</h3>
@@ -151,7 +151,7 @@
                         <select name="penyedia_name" id="edit_penyedia" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none bg-white">
                             <option value="">Pilih...</option>
                             {% for val, label in penyedia_choices %}
-                            <option value="{{ label }}">{{ label }}</option>
+                            <option value="{{ val }}">{{ label }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -178,16 +178,16 @@
                 </div>
 
                 <div class="pt-4 flex justify-end space-x-2">
-                    <button type="button" onclick="toggleModal('modalEditHadiah')" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-md">Batal</button>
-                    <button type="submit" class="px-4 py-2 text-sm font-medium bg-[#3a5a9c] text-white rounded-md hover:bg-[#2c457a]">Simpan Perubahan</button>
+                    <button type="button" onclick="toggleModal('modalEditHadiah')" class="px-6 py-2.5 text-sm font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-all">Batal</button>
+                    <button type="submit" class="px-6 py-2.5 text-sm font-bold bg-[#253d66] text-white rounded-xl shadow-md hover:bg-[#1a2b49] transition-all">Simpan Perubahan</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div id="modalHapusHadiah" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div id="modalHapusHadiah" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center z-50 transition-all">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden p-6 text-center">
-            <h3 class="font-bold text-xl text-gray-800 mb-2">Hapus Hadiah?</h3>
+            <h3 class="font-bold text-xl text-[#d13232] mb-2">Hapus Hadiah?</h3>
             <p class="text-sm text-gray-500 mb-6 px-4">Tindakan ini tidak dapat dibatalkan. Pastikan hadiah ini sudah benar-benar tidak berlaku lagi.</p>
             
             <form method="POST" class="flex justify-center space-x-3">
@@ -195,10 +195,10 @@
                 <input type="hidden" name="action" value="hapus">
                 <input type="hidden" name="kode_hadiah" id="delete_kode">
                 
-                <button type="button" onclick="toggleModal('modalHapusHadiah')" class="px-6 py-2 text-sm font-bold text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition">
+                <button type="button" onclick="toggleModal('modalHapusHadiah')" class="flex-1 py-3 px-6 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold rounded-xl transition-all border border-gray-200">
                     Batal
                 </button>
-                <button type="submit" class="px-6 py-2 text-sm font-bold bg-[#1a233a] text-white rounded-md hover:bg-[#0f1523] transition">
+                <button type="submit" class="flex-1 py-3 px-6 bg-[#d13232] hover:bg-[#b02a2a] text-white font-bold rounded-xl shadow-md transition-all">
                     Hapus
                 </button>
             </form>
@@ -209,6 +209,17 @@
 
 {% block extra_js %}
 <script>
+    function toggleModal(modalID) {
+        const modal = document.getElementById(modalID);
+        if (modal.classList.contains('hidden')) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        } else {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    }
+
     function openEditModal(kode, nama, penyedia, miles, deskripsi, start, end) {
         document.getElementById('edit_kode').value = kode;
         document.getElementById('edit_nama').value = nama;

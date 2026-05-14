@@ -294,10 +294,10 @@ def kelola_klaim_view(request):
     with connection.cursor() as cursor:
         query = """
             SELECT 
-                c.id, p.first_mid_name || ' ' || p.last_name AS member, c.email_member AS email,
+                c.id, p.first_mid_name || ' ' || p.last_name AS member_name, c.email_member AS email,
                 c.maskapai, c.bandara_asal || ' → ' || c.bandara_tujuan AS rute,
                 c.tanggal_penerbangan AS tanggal, c.flight_number AS flight,
-                c.kelas_kabin AS kelas, c.timestamp AS pengajuan, c.status_penerimaan AS status
+                c.kelas_kabin AS kelas, c.timestamp AS timestamp, c.status_penerimaan AS status
             FROM claim_missing_miles c
             JOIN pengguna p ON c.email_member = p.email
             WHERE 1=1
@@ -347,7 +347,7 @@ def kelola_hadiah_view(request):
                     """, [new_kode, nama, miles, deskripsi, start, end, penyedia_id])
                 messages.success(request, f'Hadiah berhasil ditambah dengan kode {new_kode}.')
             except Exception as e:
-                messages.error(request, f'Gagal menambah hadiah: {str(e)}')
+                messages.error(request, 'Gagal menambah hadiah karena format input tidak valid atau ada data yang kosong.')
 
         elif action == 'edit':
             nama = request.POST.get('nama_reward')
@@ -366,7 +366,7 @@ def kelola_hadiah_view(request):
                     """, [nama, miles, deskripsi, start, end, penyedia_id, kode])
                 messages.success(request, 'Detail hadiah berhasil diperbarui.')
             except Exception as e:
-                messages.error(request, f'Gagal mengedit hadiah: {str(e)}')
+                messages.error(request, 'Gagal mengedit hadiah karena format input tidak valid atau penyedia tidak ditemukan.')
 
         elif action == 'hapus':
             try:
@@ -382,6 +382,7 @@ def kelola_hadiah_view(request):
         cursor.execute("""
             SELECT h.kode_hadiah AS kode, h.nama, h.deskripsi, h.miles, 
                    h.valid_start_date AS valid_start, h.program_end,
+                   h.id_penyedia,
                    COALESCE(m.nama_mitra, ma.nama_maskapai) AS penyedia,
                    CASE WHEN m.nama_mitra IS NOT NULL THEN 'partner' ELSE 'airline' END AS tipe_penyedia,
                    CASE WHEN h.program_end >= CURRENT_DATE THEN TRUE ELSE FALSE END AS aktif
