@@ -136,54 +136,66 @@ def register_view(request):
         kewarganegaraan = request.POST.get('kewarganegaraan') or None
 
         # insertion and auto increment
-        with connection.cursor() as cur:
-            # insert ke pengguna 
-            cur.execute("""
-                INSERT INTO pengguna (
-                    email, password, salutation, first_mid_name, last_name,
-                    country_code, mobile_number, tanggal_lahir, kewarganegaraan
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, [email, hashed_password, salutation, first_mid_name, last_name,
-                  country_code, mobile_number, tanggal_lahir, kewarganegaraan])
-
-            # insert ke tabel spesifik berdasarkan roleny
-            if role == 'member':
-                # generate nomor member menggunakan MAX()
+        # insertion and auto increment
+        try:
+            with connection.cursor() as cur:
+                # insert ke pengguna 
                 cur.execute("""
-                    SELECT MAX(CAST(SUBSTRING(nomor_member FROM 2) AS INTEGER)) 
-                    FROM member
-                """)
-                max_id = cur.fetchone()[0]
-                next_number = 1 if max_id is None else max_id + 1
-                nomor_member = f"M{next_number:04d}"
+                    INSERT INTO pengguna (
+                        email, password, salutation, first_mid_name, last_name,
+                        country_code, mobile_number, tanggal_lahir, kewarganegaraan
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, [email, hashed_password, salutation, first_mid_name, last_name,
+                      country_code, mobile_number, tanggal_lahir, kewarganegaraan])
 
-                cur.execute("""
-                    INSERT INTO member (email, nomor_member, tanggal_bergabung, id_tier, award_miles, total_miles)
-                    VALUES (%s, %s, %s, 'T01', 0, 0)
-                """, [email, nomor_member, date.today()])
+                # insert ke tabel spesifik berdasarkan rolenya
+                if role == 'member':
+                    cur.execute("""
+                        SELECT MAX(CAST(SUBSTRING(nomor_member FROM 2) AS INTEGER)) 
+                        FROM member
+                    """)
+                    max_id = cur.fetchone()[0]
+                    next_number = 1 if max_id is None else max_id + 1
+                    nomor_member = f"M{next_number:04d}"
 
-            elif role == 'staf':
-                kode_maskapai = request.POST.get('kode_maskapai', '')
+                    cur.execute("""
+                        INSERT INTO member (email, nomor_member, tanggal_bergabung, id_tier, award_miles, total_miles)
+                        VALUES (%s, %s, %s, 'T01', 0, 0)
+                    """, [email, nomor_member, date.today()])
+
+                elif role == 'staf':
+                    kode_maskapai = request.POST.get('kode_maskapai', '')
+                    
+                    cur.execute("""
+                        SELECT MAX(CAST(SUBSTRING(id_staf FROM 2) AS INTEGER)) 
+                        FROM staf
+                    """)
+                    max_id = cur.fetchone()[0]
+                    next_number = 1 if max_id is None else max_id + 1
+                    id_staf = f"S{next_number:04d}"
+
+                    cur.execute("""
+                        INSERT INTO staf (email, id_staf, kode_maskapai)
+                        VALUES (%s, %s, %s)
+                    """, [email, id_staf, kode_maskapai])
+
+            # Jika sukses tanpa terkena trigger
+            messages.success(request, 'Akun berhasil dibuat! Silakan login.')
+            return redirect('accounts:login')
+
+        except Exception as e:
+            # Tangkap lemparan error dari Trigger
+            pesan_error = str(e).split('\n')[0].strip()
+            
+            if "ERROR: Email" in pesan_error:
+                # Tampilkan pesan sama persis dengan yang dari database
+                messages.error(request, pesan_error)
+            else:
+                messages.error(request, f"Terjadi kesalahan: {pesan_error}")
                 
-                # generate id staf menggunakan MAX()
-                cur.execute("""
-                    SELECT MAX(CAST(SUBSTRING(id_staf FROM 2) AS INTEGER)) 
-                    FROM staf
-                """)
-                max_id = cur.fetchone()[0]
-                next_number = 1 if max_id is None else max_id + 1
-                id_staf = f"S{next_number:04d}"
-
-                cur.execute("""
-                    INSERT INTO staf (email, id_staf, kode_maskapai)
-                    VALUES (%s, %s, %s)
-                """, [email, id_staf, kode_maskapai])
-
-        messages.success(request, 'Akun berhasil dibuat! Silakan login.')
-        return redirect('accounts:login')
-
+            return render(request, 'accounts/register.html', {'maskapai_choices': MASKAPAI_CHOICES})
+        
     return render(request, 'accounts/register.html', {'maskapai_choices': MASKAPAI_CHOICES})
-
 
 def logout_view(request):
     request.session.flush()

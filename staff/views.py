@@ -210,12 +210,11 @@ def kelola_klaim_view(request):
                 
         except Exception as e:
             # menangkap pesan EXCEPTION langsung dari Trigger PostgreSQL
-            pesan_trigger = str(e).split('\n')[0].strip() # Ambil baris pertama saja
+            pesan_trigger = str(e).split('\n')[0].strip() # ambil baris pertama saja
             
-            # karena trigger mengirim text berawalan "SUKSES:", kita parse pesannya
+            # langsung tampilkan pesan apa adanya tanpa di-replace
             if "SUKSES:" in pesan_trigger:
-                pesan_bersih = pesan_trigger.replace('SUKSES: ', '')
-                messages.success(request, pesan_bersih)
+                messages.success(request, pesan_trigger)
             else:
                 messages.error(request, pesan_trigger)
 
