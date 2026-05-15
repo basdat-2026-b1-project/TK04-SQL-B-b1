@@ -470,45 +470,69 @@ def package_view(request):
         pkg_id = request.POST.get('package_id', '').strip()
 
         try:
-            with transaction.atomic():
-                with connection.cursor() as cur:
-                    cur.execute("""
-                        SELECT id, harga_paket, jumlah_award_miles
-                        FROM award_miles_package
-                        WHERE id = %s
-                    """, [pkg_id])
+            # langsung auto-commit, tanpa transaction.atomic() agar Trigger aman
+            with connection.cursor() as cur:
+                # tier before
+                cur.execute("SELECT t.nama FROM member m JOIN tier t ON m.id_tier = t.id_tier WHERE m.email = %s", [email_member])
+                row_lama = cur.fetchone()
+                tier_lama = row_lama[0] if row_lama else 'Blue'
 
-                    row = cur.fetchone()
+                cur.execute("""
+                    SELECT id, harga_paket, jumlah_award_miles
+                    FROM award_miles_package
+                    WHERE id = %s
+                """, [pkg_id])
 
-                    if not row:
-                        messages.error(request, 'Paket tidak ditemukan.')
-                        return redirect('member:package')
+                row = cur.fetchone()
 
-                    pkg_id_db, harga_paket, jumlah_award_miles = row
-                    now = timezone.now()
+                if not row:
+                    messages.error(request, 'Paket tidak ditemukan.')
+                    return redirect('member:package')
 
-                    cur.execute("""
-                        INSERT INTO member_award_miles_package (
-                            id_award_miles_package, email_member, timestamp
-                        ) VALUES (%s, %s, %s)
-                    """, [pkg_id_db, email_member, now])
+                pkg_id_db, harga_paket, jumlah_award_miles = row
+                now = timezone.now()
 
-                    cur.execute(
-                        "SELECT award_miles FROM member WHERE email = %s",
-                        [email_member]
-                    )
-                    saldo_baru = cur.fetchone()[0]
+                # insert (Trigger pembaruan saldo & tier di Supabase akan berjalan otomatis)
+                cur.execute("""
+                    INSERT INTO member_award_miles_package (
+                        id_award_miles_package, email_member, timestamp
+                    ) VALUES (%s, %s, %s)
+                """, [pkg_id_db, email_member, now])
 
+                # force commit agar tersimpan
+                connection.commit()
+
+                # catat tier saldonya
+                cur.execute("SELECT t.nama, m.award_miles, m.total_miles FROM member m JOIN tier t ON m.id_tier = t.id_tier WHERE m.email = %s", [email_member])
+                row_baru = cur.fetchone()
+                tier_baru = row_baru[0] if row_baru else 'Blue'
+                saldo_baru = row_baru[1]
+                total_baru = row_baru[2]
+
+            # Update Session Django
             request.session['award_miles'] = saldo_baru
+            request.session['total_miles'] = total_baru
+            request.session['tier'] = tier_baru
+
+            # Toast 1: Pesan sukses beli package (Format sudah disesuaikan dengan soal)
             messages.success(
                 request,
-                f'Berhasil membeli {jumlah_award_miles:,} Award Miles '
-                f'seharga Rp {int(harga_paket):,}.'.replace(',', '.')
+                f'SUKSES: Pembelian package berhasil. Award miles dan total miles Anda bertambah {jumlah_award_miles} miles.'
             )
 
+            # Toast 2: Pesan sukses NAIK TIER (Hanya muncul jika tier berubah)
+            if tier_lama != tier_baru:
+                messages.success(
+                    request,
+                    f'SUKSES: Tier Member "{email_member}" telah diperbarui dari "{tier_lama}" menjadi "{tier_baru}" berdasarkan total miles yang dimiliki.'
+                )
+
         except Exception as e:
-            print("ERROR PACKAGE:", e)  # lihat di terminal
-            messages.error(request, 'Terjadi kesalahan saat membeli package.')
+            pesan_error = str(e).split('\n')[0].strip()
+            if "ERROR:" in pesan_error:
+                messages.error(request, pesan_error)
+            else:
+                messages.error(request, f'Terjadi kesalahan saat membeli package: {pesan_error}')
 
         return redirect('member:package')
 
@@ -522,8 +546,8 @@ def package_view(request):
         packages = [
             {
                 'id'   : row[0],
-                'miles': row[2],                                    # alias → pkg.miles di template
-                'harga': f"Rp {int(row[1]):,}".replace(',', '.'),  # alias → pkg.harga di template
+                'miles': row[2],                                    
+                'harga': f"Rp {int(row[1]):,}".replace(',', '.'),  
             }
             for row in cur.fetchall()
         ]
@@ -540,8 +564,6 @@ def package_view(request):
         cols            = [c.name for c in cur.description]
         riwayat_package = [dict(zip(cols, row)) for row in cur.fetchall()]
 
-    # Saldo terkini
- 
     with connection.cursor() as cur:
         cur.execute("SELECT award_miles, total_miles FROM member WHERE email = %s", [email_member])
         row         = cur.fetchone()
