@@ -20,7 +20,7 @@ SECRET_KEY = os.environ.get(
     'django-insecure-d%0xza6#h-b7)w3j1y4(j%nb9-g83on=1zm^#9$#$k-00*52e$'
 )
 
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+DEBUG = True
 
 ALLOWED_HOSTS = [
     'aeromiles-b1.up.railway.app', 
