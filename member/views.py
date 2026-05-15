@@ -8,99 +8,6 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db import connection, transaction
 from datetime import date
-<<<<<<< HEAD
-
-DUMMY_IDENTITAS = [
-    {'nomor': 'A12345678', 'jenis': 'Paspor', 'negara': 'Indonesia',
-     'tanggal_terbit': '2020-01-15', 'tanggal_habis': '2030-01-15', 'status': 'Aktif'},
-    {'nomor': '327501234567890', 'jenis': 'KTP', 'negara': 'Indonesia',
-     'tanggal_terbit': '2019-06-01', 'tanggal_habis': '2024-06-01', 'status': 'Kedaluwarsa'},
-    {'nomor': 'SIM0001', 'jenis': 'SIM', 'negara': 'Indonesia',
-     'tanggal_terbit': '2023-03-10', 'tanggal_habis': '2028-03-10', 'status': 'Aktif'},
-]
-
-DUMMY_MASKAPAI = [
-    ('GA', 'GA - Garuda Indonesia'),
-    ('QG', 'QG - Citilink'),
-    ('JT', 'JT - Lion Air'),
-    ('ID', 'ID - Batik Air'),
-    ('SQ', 'SQ - Singapore Airlines'),
-]
-
-DUMMY_BANDARA = [
-    ('CGK', 'CGK - Soekarno-Hatta, Jakarta'),
-    ('DPS', 'DPS - Ngurah Rai, Bali'),
-    ('SUB', 'SUB - Juanda, Surabaya'),
-    ('SIN', 'SIN - Changi, Singapore'),
-    ('NRT', 'NRT - Narita, Tokyo'),
-    ('KUL', 'KUL - KLIA, Kuala Lumpur'),
-    ('BKK', 'BKK - Suvarnabhumi, Bangkok'),
-    ('HKG', 'HKG - Chek Lap Kok, Hong Kong'),
-    ('SYD', 'SYD - Kingsford Smith, Sydney'),
-    ('ICN', 'ICN - Incheon, Seoul'),
-]
-
-DUMMY_KLAIM = [
-    {'id': 'CLM-001', 'maskapai': 'GA', 'rute': 'CGK → DPS',
-     'tanggal': '2024-10-01', 'flight': 'GA404', 'kelas': 'Business',
-     'status': 'Disetujui', 'timestamp': '2024-10-05 18:45:00'},
-    {'id': 'CLM-002', 'maskapai': 'SQ', 'rute': 'SIN → NRT',
-     'tanggal': '2024-11-15', 'flight': 'SQ12', 'kelas': 'Economy',
-     'status': 'Menunggu', 'timestamp': '2024-11-20 18:45:00'},
-    {'id': 'CLM-003', 'maskapai': 'GA', 'rute': 'CGK → SUB',
-     'tanggal': '2025-01-10', 'flight': 'GA202', 'kelas': 'Economy',
-     'status': 'Ditolak', 'timestamp': '2025-01-12 09:30:00'},
-]
-
-DUMMY_TRANSFER = [
-    {'timestamp': '2025-01-15 10:30', 'member': 'Jane Smith',
-     'email': 'jane@example.com', 'jumlah': -5000, 'catatan': 'Hadiah ulang tahun', 'tipe': 'Kirim'},
-    {'timestamp': '2025-02-01 14:00', 'member': 'Budi A. Santoso',
-     'email': 'budi@example.com', 'jumlah': 2000, 'catatan': '-', 'tipe': 'Terima'},
-]
-
-DUMMY_HADIAH = [
-    {'kode': 'RWD-001', 'nama': 'Tiket Domestik PP', 'penyedia': 'Garuda Indonesia',
-     'miles': 15000, 'deskripsi': 'Tiket pulang-pergi rute domestik Indonesia',
-     'valid_start': '2024-01-01', 'program_end': '2025-12-31'},
-    {'kode': 'RWD-002', 'nama': 'Upgrade Business Class', 'penyedia': 'Garuda Indonesia',
-     'miles': 25000, 'deskripsi': 'Upgrade dari economy ke business class',
-     'valid_start': '2026-01-01', 'program_end': '2027-01-01'},
-    {'kode': 'RWD-003', 'nama': 'Voucher Hotel Rp500.000', 'penyedia': 'TravelokaPartner',
-     'miles': 8000, 'deskripsi': 'Voucher hotel berlaku di seluruh Indonesia',
-     'valid_start': '2024-06-01', 'program_end': '2025-06-30'},
-    {'kode': 'RWD-004', 'nama': 'Akses Lounge 1x', 'penyedia': 'Plaza Premium',
-     'miles': 3000, 'deskripsi': 'Akses lounge bandara premium 1 kali kunjungan',
-     'valid_start': '2024-01-01', 'program_end': '2025-12-31'},
-    {'kode': 'RWD-005', 'nama': 'Extra Bagasi 10kg', 'penyedia': 'Garuda Indonesia',
-     'miles': 5000, 'deskripsi': 'Tambahan bagasi 10kg untuk 1 penerbangan',
-     'valid_start': '2025-01-01', 'program_end': '2026-12-31'},
-]
-
-DUMMY_RIWAYAT_REDEEM = [
-    {'hadiah': 'Akses Lounge 1x', 'timestamp': '2025-01-20 16:00', 'miles': -3000},
-]
-
-DUMMY_PACKAGES = [
-    {'id': 'AMP-001', 'miles': 1000, 'harga': 'Rp 150.000'},
-    {'id': 'AMP-002', 'miles': 5000, 'harga': 'Rp 650.000'},
-    {'id': 'AMP-003', 'miles': 10000, 'harga': 'Rp 1.200.000'},
-    {'id': 'AMP-004', 'miles': 25000, 'harga': 'Rp 2.750.000'},
-    {'id': 'AMP-005', 'miles': 50000, 'harga': 'Rp 5.000.000'},
-]
-
-DUMMY_TIERS = [
-    {'id': 'BLUE', 'nama': 'Blue', 'min_frekuensi': 0, 'min_miles': 0,
-     'keuntungan': ['Akumulasi miles dasar', 'Akses penawaran khusus member']},
-    {'id': 'SILVER', 'nama': 'Silver', 'min_frekuensi': 10, 'min_miles': 15000,
-     'keuntungan': ['Bonus miles 25%', 'Priority check-in', 'Akses lounge partner']},
-    {'id': 'GOLD', 'nama': 'Gold', 'min_frekuensi': 25, 'min_miles': 40000,
-     'keuntungan': ['Bonus miles 50%', 'Priority boarding', 'Akses lounge premium', 'Extra bagasi 10kg']},
-    {'id': 'PLATINUM', 'nama': 'Platinum', 'min_frekuensi': 50, 'min_miles': 80000,
-     'keuntungan': ['Bonus miles 100%', 'Upgrade gratis', 'Akses lounge first class', 'Extra bagasi 20kg', 'Dedicated hotline']},
-]
-=======
->>>>>>> 0bb01e98b9dbd28c3c00ec6b3566da73e3e097d5
 
 def login_required_member(view_func):
     """Simple decorator untuk cek session member"""
@@ -383,8 +290,6 @@ def dashboard(request):
             'award_miles': row[4] if row else 0,
         }
 
-<<<<<<< HEAD
-=======
         cursor.execute("""
             SELECT tipe, timestamp, jumlah AS miles FROM (
                 SELECT 'Transfer Keluar' AS tipe, timestamp, -jumlah AS jumlah FROM transfer WHERE email_member_1 = %s
@@ -402,7 +307,6 @@ def dashboard(request):
 
     return render(request, 'member/dashboard.html', context)
 
->>>>>>> 0bb01e98b9dbd28c3c00ec6b3566da73e3e097d5
 @login_required_member
 def redeem_view(request):
     email_member = request.session.get('email')
@@ -446,14 +350,7 @@ def redeem_view(request):
                         "INSERT INTO redeem (email_member, kode_hadiah, timestamp) VALUES (%s, %s, %s)",
                         [email_member, kode_hadiah, now]
                     )
-<<<<<<< HEAD
-                    cur.execute(
-                        "UPDATE member SET award_miles = award_miles - %s WHERE email = %s",
-                        [miles_dibutuhkan, email_member]
-                    )
-=======
             
->>>>>>> 0bb01e98b9dbd28c3c00ec6b3566da73e3e097d5
                     saldo_baru = award_miles - miles_dibutuhkan
  
             # Sync ke session supaya request.session.award_miles di template keisi
@@ -593,14 +490,6 @@ def package_view(request):
                         ) VALUES (%s, %s, %s)
                     """, [pkg_id_db, email_member, now])
 
-<<<<<<< HEAD
-                    cur.execute("""
-                        UPDATE member SET award_miles = award_miles + %s
-                        WHERE email = %s
-                    """, [jumlah_award_miles, email_member])
-
-=======
->>>>>>> 0bb01e98b9dbd28c3c00ec6b3566da73e3e097d5
                     cur.execute(
                         "SELECT award_miles FROM member WHERE email = %s",
                         [email_member]
@@ -649,14 +538,6 @@ def package_view(request):
         riwayat_package = [dict(zip(cols, row)) for row in cur.fetchall()]
 
     # Saldo terkini
-<<<<<<< HEAD
-    with connection.cursor() as cur:
-        cur.execute("SELECT award_miles FROM member WHERE email = %s", [email_member])
-        row         = cur.fetchone()
-        award_miles = row[0] if row else 0
-
-    request.session['award_miles'] = award_miles
-=======
  
     with connection.cursor() as cur:
         cur.execute("SELECT award_miles, total_miles FROM member WHERE email = %s", [email_member])
@@ -666,7 +547,6 @@ def package_view(request):
 
     request.session['award_miles'] = award_miles
     request.session['total_miles'] = total_miles
->>>>>>> 0bb01e98b9dbd28c3c00ec6b3566da73e3e097d5
 
     return render(request, 'member/package.html', {
         'packages'       : packages,
@@ -674,10 +554,6 @@ def package_view(request):
         'award_miles'    : award_miles,
     })
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 0bb01e98b9dbd28c3c00ec6b3566da73e3e097d5
 @login_required_member
 def info_tier_view(request):
     email_member = request.session.get('email')
