@@ -125,56 +125,71 @@ def register_view(request):
             messages.error(request, 'Email tidak boleh kosong.')
             return render(request, 'accounts/register.html', {'maskapai_choices': MASKAPAI_CHOICES})
 
-        # Cek apakah email sudah ada
-        with connection.cursor() as cur:
-            cur.execute("SELECT email FROM pengguna WHERE email = %s", [email])
-            if cur.fetchone():
-                messages.error(request, 'Email sudah terdaftar.')
-                return render(request, 'accounts/register.html', {'maskapai_choices': MASKAPAI_CHOICES})
-
         hashed_password = make_password(password)
         salutation      = request.POST.get('salutation', '')
-        first_mid_name  = request.POST.get('first_mid_name', '')
-        last_name       = request.POST.get('last_name', '')
+        # menggunakan nama_depan & nama_belakang sesuai dengan HTML form kamu
+        first_mid_name  = request.POST.get('nama_depan', '')
+        last_name       = request.POST.get('nama_belakang', '')
         country_code    = request.POST.get('country_code') or None
         mobile_number   = request.POST.get('mobile_number') or None
         tanggal_lahir   = request.POST.get('tanggal_lahir') or None
         kewarganegaraan = request.POST.get('kewarganegaraan') or None
 
-        with connection.cursor() as cur:
-            # Insert ke pengguna
-            cur.execute("""
-                INSERT INTO pengguna (
-                    email, password, salutation, first_mid_name, last_name,
-                    country_code, mobile_number, tanggal_lahir, kewarganegaraan
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, [email, hashed_password, salutation, first_mid_name, last_name,
-                  country_code, mobile_number, tanggal_lahir, kewarganegaraan])
-
-            if role == 'member':
-                # Generate nomor member
-                cur.execute("SELECT COUNT(*) FROM member")
-                count        = cur.fetchone()[0]
-                nomor_member = f"M{count + 1:04d}"
-
+        try:
+            with connection.cursor() as cur:
+                # insert ke pengguna
                 cur.execute("""
-                    INSERT INTO member (email, nomor_member, tanggal_bergabung, id_tier, award_miles, total_miles)
-                    VALUES (%s, %s, %s, 'T01', 0, 0)
-                """, [email, nomor_member, date.today()])
+                    INSERT INTO pengguna (
+                        email, password, salutation, first_mid_name, last_name,
+                        country_code, mobile_number, tanggal_lahir, kewarganegaraan
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, [email, hashed_password, salutation, first_mid_name, last_name,
+                      country_code, mobile_number, tanggal_lahir, kewarganegaraan])
 
-            elif role == 'staf':
-                kode_maskapai = request.POST.get('kode_maskapai', '')
-                cur.execute("SELECT COUNT(*) FROM staf")
-                count   = cur.fetchone()[0]
-                id_staf = f"S{count + 1:04d}"
+                if role == 'member':
+                    # generate nomor member dengan MAX
+                    cur.execute("""
+                        SELECT MAX(CAST(SUBSTRING(nomor_member FROM 2) AS INTEGER)) 
+                        FROM member
+                    """)
+                    max_id = cur.fetchone()[0]
+                    next_number = 1 if max_id is None else max_id + 1
+                    nomor_member = f"M{next_number:04d}"
 
-                cur.execute("""
-                    INSERT INTO staf (email, id_staf, kode_maskapai)
-                    VALUES (%s, %s, %s)
-                """, [email, id_staf, kode_maskapai])
+                    cur.execute("""
+                        INSERT INTO member (email, nomor_member, tanggal_bergabung, id_tier, award_miles, total_miles)
+                        VALUES (%s, %s, %s, 'T01', 0, 0)
+                    """, [email, nomor_member, date.today()])
 
-        messages.success(request, 'Akun berhasil dibuat! Silakan login.')
-        return redirect('accounts:login')
+                elif role == 'staf':
+                    kode_maskapai = request.POST.get('kode_maskapai', '')
+                    
+                    # generate ID staf dengan MAX
+                    cur.execute("""
+                        SELECT MAX(CAST(SUBSTRING(id_staf FROM 2) AS INTEGER)) 
+                        FROM staf
+                    """)
+                    max_id = cur.fetchone()[0]
+                    next_number = 1 if max_id is None else max_id + 1
+                    id_staf = f"S{next_number:04d}"
+
+                    cur.execute("""
+                        INSERT INTO staf (email, id_staf, kode_maskapai)
+                        VALUES (%s, %s, %s)
+                    """, [email, id_staf, kode_maskapai])
+
+            messages.success(request, 'Akun berhasil dibuat! Silakan login.')
+            return redirect('accounts:login')
+
+        except Exception as e:
+            pesan_error = str(e).split('\n')[0].strip()
+            
+            if "ERROR: Email" in pesan_error:
+                messages.error(request, pesan_error)
+            else:
+                messages.error(request, f"Terjadi kesalahan: {pesan_error}")
+                
+            return render(request, 'accounts/register.html', {'maskapai_choices': MASKAPAI_CHOICES})
 
     return render(request, 'accounts/register.html', {'maskapai_choices': MASKAPAI_CHOICES})
 
@@ -300,9 +315,9 @@ def update_password(request):
     if request.method != 'POST':
         return redirect('accounts:profile')
 
-    email             = request.session.get('email')
-    password_lama     = request.POST.get('password_lama', '')
-    password_baru     = request.POST.get('password_baru', '')
+    email               = request.session.get('email')
+    password_lama       = request.POST.get('password_lama', '')
+    password_baru       = request.POST.get('password_baru', '')
     konfirmasi_password = request.POST.get('konfirmasi_password_baru', '')
 
     with connection.cursor() as cur:
