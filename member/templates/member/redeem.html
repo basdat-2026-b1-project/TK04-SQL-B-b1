@@ -5,15 +5,18 @@
 {% block title %}Redeem Hadiah{% endblock %}
 
 {% block content %}
+<!-- Container Utama: mx-auto berfungsi untuk mengetengahkan konten -->
 <div class="max-w-7xl mx-auto px-6 md:px-10 pt-10 pb-20">
     
+    <!-- Header Section -->
     <div class="mb-10 text-center sm:text-left">
         <h1 class="text-4xl font-marcellus text-[#0A1D37] tracking-wider">Redeem Hadiah</h1>
         <p class="text-gray-500 font-inter-semibold mt-2 text-xs uppercase tracking-[0.2em]">
-            Award Miles tersedia: <span class="text-gray-900 ml-1">{{ request.session.award_miles|default:"0"|intcomma }}</span>
+            Award Miles tersedia: <span class="text-gray-900 ml-1">{{ request.session.award_miles|default:"100,000"|intcomma }}</span>
         </p>
     </div>
 
+    <!-- Tab Navigation -->
     <div class="inline-flex bg-[#E2E4E7] p-1 rounded-xl mb-10 font-inter-semibold text-[11px]">
         <button onclick="switchTab('katalog')" id="btn-katalog" 
             class="px-6 py-2 transition-all rounded-lg {% if active_tab != 'riwayat' %}bg-white text-[#0A1D37] shadow-sm{% else %}text-gray-500{% endif %}">
@@ -25,6 +28,7 @@
         </button>
     </div>
 
+    <!-- Katalog Section -->
     <div id="section-katalog" class="{% if active_tab == 'riwayat' %}hidden{% endif %}">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
             {% for h in hadiah_list %}
@@ -46,6 +50,7 @@
         </div>
     </div>
 
+    <!-- Riwayat Section -->
     <div id="section-riwayat" class="{% if active_tab != 'riwayat' %}hidden{% endif %}">
         <div class="bg-white rounded-[24px] border border-gray-100 p-8 shadow-sm overflow-x-auto">
             <table class="w-full text-left">
@@ -82,8 +87,9 @@
             </table>
         </div>
     </div>
-</div>
+</div> <!-- Penutup container utama -->
 
+<!-- Modal Redeem (Fixed Position) -->
 <div id="modalRedeem" class="fixed inset-0 bg-gray-900/60 z-[9999] hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-[32px] p-10 max-w-lg w-full shadow-2xl relative">
         <h2 class="text-2xl font-marcellus text-[#0A1D37] mb-4">Konfirmasi Redeem</h2>
@@ -99,6 +105,7 @@
         </form>
     </div>
 </div>
+
 {% endblock content %}
 
 {% block extra_js %}
@@ -110,13 +117,19 @@
         const btnR = document.getElementById('btn-riwayat');
 
         if(tab === 'katalog') {
-            kat.classList.remove('hidden'); riw.classList.add('hidden');
-            btnK.classList.add('bg-white', 'text-[#0A1D37]', 'shadow-sm'); btnK.classList.remove('text-gray-500');
-            btnR.classList.remove('bg-white', 'text-[#0A1D37]', 'shadow-sm'); btnR.classList.add('text-gray-500');
+            kat.classList.remove('hidden'); 
+            riw.classList.add('hidden');
+            btnK.classList.add('bg-white', 'text-[#0A1D37]', 'shadow-sm');
+            btnK.classList.remove('text-gray-500');
+            btnR.classList.remove('bg-white', 'text-[#0A1D37]', 'shadow-sm');
+            btnR.classList.add('text-gray-500');
         } else {
-            riw.classList.remove('hidden'); kat.classList.add('hidden');
-            btnR.classList.add('bg-white', 'text-[#0A1D37]', 'shadow-sm'); btnR.classList.remove('text-gray-500');
-            btnK.classList.remove('bg-white', 'text-[#0A1D37]', 'shadow-sm'); btnK.classList.add('text-gray-500');
+            riw.classList.remove('hidden'); 
+            kat.classList.add('hidden');
+            btnR.classList.add('bg-white', 'text-[#0A1D37]', 'shadow-sm');
+            btnR.classList.remove('text-gray-500');
+            btnK.classList.remove('bg-white', 'text-[#0A1D37]', 'shadow-sm');
+            btnK.classList.add('text-gray-500');
         }
     }
 
