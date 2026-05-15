@@ -39,12 +39,12 @@ def identitas_view(request):
                     cursor.execute("SELECT 1 FROM identitas WHERE nomor = %s", [nomor])
                     if cursor.fetchone():
                         messages.error(request, 'Nomor dokumen sudah terdaftar.')
-                    else:
-                        cursor.execute("""
-                            INSERT INTO identitas (nomor, email_member, tanggal_habis, tanggal_terbit, negara_penerbit, jenis)
-                            VALUES (%s, %s, %s, %s, %s, %s)
-                        """, [nomor, email, tanggal_habis, tanggal_terbit, negara, jenis])
-                        messages.success(request, 'Identitas berhasil ditambahkan.')
+                        return redirect('member:identitas')
+                    cursor.execute("""
+                        INSERT INTO identitas (nomor, email_member, tanggal_habis, tanggal_terbit, negara_penerbit, jenis)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, [nomor, email, tanggal_habis, tanggal_terbit, negara, jenis])
+                    messages.success(request, 'Identitas berhasil ditambahkan.')
             except Exception as e:
                 messages.error(request, f'Gagal menambah identitas: {str(e)}')
 
