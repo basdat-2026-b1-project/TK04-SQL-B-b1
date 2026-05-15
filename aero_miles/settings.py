@@ -87,9 +87,9 @@ WSGI_APPLICATION = 'aero_miles.wsgi.application'
 # ── Database (Supabase via DATABASE_URL) ─────────────────────────────────────
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
+        default=os.getenv('DATABASE_URL'),
         conn_max_age=600,
-        ssl_require=not DEBUG,   # SSL wajib di production
+        ssl_require=True
     )
 }
 
@@ -114,4 +114,4 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
