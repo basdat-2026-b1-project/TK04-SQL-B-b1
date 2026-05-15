@@ -75,7 +75,7 @@
                         <td class="px-8 py-5">
                             <div class="flex justify-end space-x-3">
                                 {% if c.status == 'Menunggu' %}
-                                    <button onclick="openEditModal('{{ c.id }}', '{{ c.maskapai }}', '{{ c.kelas }}', '{{ c.asal }}', '{{ c.tujuan }}', '{{ c.tanggal_raw }}', '{{ c.flight_number }}', '{{ c.nomor_tiket }}', '{{ c.pnr }}')" 
+                                    <button onclick="openEditModal('{{ c.id }}', '{{ c.maskapai }}', '{{ c.kelas }}', '{{ c.asal }}', '{{ c.tujuan }}', '{{ c.tanggal_raw|date:"Y-m-d" }}', '{{ c.flight }}', '{{ c.nomor_tiket }}', '{{ c.pnr }}', '{{ c.status }}')" 
                                             class="p-2 text-[#00A8E8] hover:bg-blue-50 rounded-lg" title="Edit">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                     </button>
@@ -114,7 +114,8 @@
         <form id="claimForm" method="POST" class="p-8">
             {% csrf_token %}
             <input type="hidden" name="action" id="form-action" value="ajukan">
-            <input type="hidden" name="claim_id" id="form-claim-id">
+            <input type="hidden" name="klaim_id" id="form-claim-id">
+            <input type="hidden" name="status_saat_ini" id="form-status">
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -185,7 +186,8 @@
         <form id="deleteForm" method="POST" class="flex space-x-3">
             {% csrf_token %}
             <input type="hidden" name="action" value="batalkan">
-            <input type="hidden" name="claim_id" id="delete-claim-id">
+            <input type="hidden" name="klaim_id" id="delete-claim-id">
+            <input type="hidden" name="status_saat_ini" value="Menunggu">
             
             <button type="button" onclick="closeDeleteModal()" class="flex-1 py-3 px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-all">
                 Batal
@@ -211,10 +213,11 @@
         modal.classList.remove('hidden');
     }
 
-    function openEditModal(id, maskapai, kelas, asal, tujuan, tanggal, flight, tiket, pnr) {
+    function openEditModal(id, maskapai, kelas, asal, tujuan, tanggal, flight, tiket, pnr, status) {
         document.getElementById('modal-title').innerText = "Edit Klaim #" + id;
         document.getElementById('form-action').value = "edit";
         document.getElementById('form-claim-id').value = id;
+        document.getElementById('form-status').value = status;
         document.getElementById('submit-btn').innerText = "Simpan Perubahan";
 
         document.getElementById('f-maskapai').value = maskapai;

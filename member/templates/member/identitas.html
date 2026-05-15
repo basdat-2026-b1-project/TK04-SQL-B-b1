@@ -1,96 +1,75 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto px-4 py-8">
+<div class="max-w-6xl mx-auto px-6 md:px-10 pt-10 pb-20">
 
-    <div class="flex justify-between items-center mb-8">
-        <h1 class="text-3xl font-semibold text-black">Dokumen Identitas Saya</h1>
-
+    <div class="flex justify-between items-center mb-10">
+        <h1 class="text-4xl font-marcellus text-[#0A1D37] tracking-wider">Dokumen Identitas Saya</h1>
         <button type="button"
                 onclick="openModal('modalTambah')"
-                class="flex items-center gap-3 bg-white border border-gray-300 rounded-xl px-6 py-3 shadow-md hover:bg-gray-100 transition font-semibold">
-            <span class="text-2xl leading-none">+</span>
+                class="flex items-center gap-2 bg-[#0A1D37] text-white rounded-2xl px-6 py-3 font-inter-semibold text-xs uppercase tracking-widest hover:bg-black transition-all shadow-lg">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
             Tambah Identitas
         </button>
     </div>
 
-    {% if messages %}
-        <div class="mb-5 space-y-2">
-            {% for message in messages %}
-                <div class="px-4 py-3 rounded-lg
-                    {% if message.tags == 'error' %}
-                        bg-red-100 text-red-700
-                    {% else %}
-                        bg-green-100 text-green-700
-                    {% endif %}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-
-    <div class="bg-white border border-gray-300 rounded-2xl shadow-md px-10 py-8 min-h-[420px]">
+    <div class="bg-white rounded-[24px] border border-gray-100 shadow-sm px-10 py-8 min-h-[420px] overflow-x-auto">
         <table class="w-full text-center border-collapse">
             <thead>
-                <tr class="text-gray-600 border-b border-gray-300">
-                    <th class="py-5 font-semibold">Nomor Dokumen</th>
-                    <th class="py-5 font-semibold">Jenis</th>
-                    <th class="py-5 font-semibold">Negara Penerbit</th>
-                    <th class="py-5 font-semibold">Tanggal Terbit</th>
-                    <th class="py-5 font-semibold">Tanggal Habis</th>
-                    <th class="py-5 font-semibold">Status</th>
-                    <th class="py-5 font-semibold">Aksi</th>
+                <tr class="text-[11px] font-inter-semibold text-gray-400 uppercase tracking-widest border-b border-gray-50">
+                    <th class="py-5 px-4">Nomor Dokumen</th>
+                    <th class="py-5 px-4">Jenis</th>
+                    <th class="py-5 px-4">Negara Penerbit</th>
+                    <th class="py-5 px-4">Tanggal Terbit</th>
+                    <th class="py-5 px-4">Tanggal Habis</th>
+                    <th class="py-5 px-4">Status</th>
+                    <th class="py-5 px-4">Aksi</th>
                 </tr>
             </thead>
 
-            <tbody>
+            <tbody class="divide-y divide-gray-50">
                 {% for identitas in identitas_list %}
-                <tr class="border-b border-gray-300 text-gray-700">
-                    <td class="py-5">{{ identitas.nomor }}</td>
-                    <td class="py-5">{{ identitas.jenis }}</td>
-                    <td class="py-5">{{ identitas.negara }}</td>
-                    <td class="py-5">{{ identitas.tanggal_terbit }}</td>
-                    <td class="py-5">{{ identitas.tanggal_habis }}</td>
-                    <td class="py-5">
+                <tr class="hover:bg-gray-50/50 transition-colors text-gray-700 text-sm">
+                    <td class="py-6 px-4 font-inter-semibold text-gray-900">{{ identitas.nomor }}</td>
+                    <td class="py-6 px-4">{{ identitas.jenis }}</td>
+                    <td class="py-6 px-4">{{ identitas.negara }}</td>
+                    <td class="py-6 px-4">{{ identitas.tanggal_terbit }}</td>
+                    <td class="py-6 px-4">{{ identitas.tanggal_habis }}</td>
+                    <td class="py-6 px-4">
                         {% if identitas.status == "Aktif" %}
-                            <span class="px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm">
-                                Aktif
-                            </span>
+                            <span class="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-inter-semibold uppercase tracking-wide">Aktif</span>
                         {% else %}
-                            <span class="px-3 py-1 rounded-full bg-red-100 text-red-700 text-sm">
-                                Kedaluwarsa
-                            </span>
+                            <span class="px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-inter-semibold uppercase tracking-wide">Kedaluwarsa</span>
                         {% endif %}
                     </td>
-                    <td class="py-5">
+                    <td class="py-6 px-4">
                         <div class="flex justify-center gap-3">
                             <button type="button"
                                     onclick="openModal('modalEdit{{ forloop.counter }}')"
-                                    class="text-blue-600 hover:text-blue-800 text-xl">
-                                ✎
+                                    class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Edit">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                             </button>
-
                             <button type="button"
                                     onclick="openModal('modalHapus{{ forloop.counter }}')"
-                                    class="text-red-600 hover:text-red-800 text-xl">
-                                🗑
+                                    class="w-8 h-8 flex items-center justify-center rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-colors" title="Hapus">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                             </button>
                         </div>
                     </td>
                 </tr>
 
+                {# ── Modal Edit ── #}
                 <div id="modalEdit{{ forloop.counter }}"
-                     class="hidden fixed inset-0 bg-black/50 z-[9999] items-center justify-center px-4">
+                     class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[9999] items-center justify-center p-4"
+                     onclick="handleBackdropClick(event, 'modalEdit{{ forloop.counter }}')">
+                    <div class="bg-white w-full max-w-xl rounded-[40px] shadow-2xl p-10 relative" onclick="event.stopPropagation()">
+                        <button type="button"
+                                onclick="closeModal('modalEdit{{ forloop.counter }}')"
+                                class="absolute top-8 right-8 text-gray-400 hover:text-gray-600 transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
 
-                    <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl p-8">
-                        <div class="flex justify-between items-center mb-6">
-                            <h2 class="text-2xl font-semibold">Edit Identitas</h2>
-                            <button type="button"
-                                    onclick="closeModal('modalEdit{{ forloop.counter }}')"
-                                    class="text-2xl">
-                                ×
-                            </button>
-                        </div>
+                        <h2 class="text-3xl font-marcellus text-[#0A1D37] mb-8">Edit Identitas</h2>
 
                         <form method="POST" action="{% url 'member:identitas' %}">
                             {% csrf_token %}
@@ -99,72 +78,78 @@
 
                             <div class="space-y-4">
                                 <div>
-                                    <label class="block mb-1 text-sm font-semibold">Nomor Dokumen</label>
+                                    <label class="block mb-1 text-xs font-inter-semibold text-gray-400 uppercase tracking-widest">Nomor Dokumen</label>
                                     <input type="text" value="{{ identitas.nomor }}" readonly
-                                           class="w-full px-4 py-3 border rounded-lg bg-gray-100">
+                                           class="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-sm text-gray-500">
                                 </div>
-
                                 <div>
-                                    <label class="block mb-1 text-sm font-semibold">Jenis</label>
-                                    <select name="jenis" class="w-full px-4 py-3 border rounded-lg">
+                                    <label class="block mb-1 text-xs font-inter-semibold text-gray-400 uppercase tracking-widest">Jenis</label>
+                                    <select name="jenis" class="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1D37]/20">
                                         <option value="Paspor" {% if identitas.jenis == "Paspor" %}selected{% endif %}>Paspor</option>
                                         <option value="KTP" {% if identitas.jenis == "KTP" %}selected{% endif %}>KTP</option>
                                         <option value="SIM" {% if identitas.jenis == "SIM" %}selected{% endif %}>SIM</option>
                                     </select>
                                 </div>
-
                                 <div>
-                                    <label class="block mb-1 text-sm font-semibold">Negara Penerbit</label>
+                                    <label class="block mb-1 text-xs font-inter-semibold text-gray-400 uppercase tracking-widest">Negara Penerbit</label>
                                     <input type="text" name="negara" value="{{ identitas.negara }}"
-                                           class="w-full px-4 py-3 border rounded-lg">
+                                           class="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1D37]/20">
                                 </div>
-
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label class="block mb-1 text-sm font-semibold">Tanggal Terbit</label>
-                                        <input type="date" name="tanggal_terbit" value="{{ identitas.tanggal_terbit }}"
-                                               class="w-full px-4 py-3 border rounded-lg">
+                                        <label class="block mb-1 text-xs font-inter-semibold text-gray-400 uppercase tracking-widest">Tanggal Terbit</label>
+                                        <input type="date" name="tanggal_terbit" value="{{ identitas.tanggal_terbit|date:'Y-m-d' }}"
+                                               class="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1D37]/20">
                                     </div>
-
                                     <div>
-                                        <label class="block mb-1 text-sm font-semibold">Tanggal Habis</label>
-                                        <input type="date" name="tanggal_habis" value="{{ identitas.tanggal_habis }}"
-                                               class="w-full px-4 py-3 border rounded-lg">
+                                        <label class="block mb-1 text-xs font-inter-semibold text-gray-400 uppercase tracking-widest">Tanggal Habis</label>
+                                        <input type="date" name="tanggal_habis" value="{{ identitas.tanggal_habis|date:'Y-m-d' }}"
+                                               class="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1D37]/20">
                                     </div>
                                 </div>
-
                                 <div>
-                                    <label class="block mb-1 text-sm font-semibold">Status</label>
+                                    <label class="block mb-1 text-xs font-inter-semibold text-gray-400 uppercase tracking-widest">Status</label>
                                     {% if identitas.status == "Aktif" %}
-                                        <span class="bg-green-100 text-green-700">Aktif</span>
+                                        <span class="inline-block px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-inter-semibold uppercase tracking-wide">Aktif</span>
                                     {% else %}
-                                        <span class="bg-red-100 text-red-700">Kedaluwarsa</span>
+                                        <span class="inline-block px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-inter-semibold uppercase tracking-wide">Kedaluwarsa</span>
                                     {% endif %}
                                 </div>
                             </div>
 
-                            <div class="flex justify-end gap-3 mt-8">
+                            <div class="flex flex-col gap-3 mt-10">
+                                <button type="submit"
+                                        class="w-full py-4 rounded-2xl bg-[#1a2b49] text-white font-inter-semibold text-xs hover:bg-[#253d66] transition-all shadow-lg uppercase tracking-widest">
+                                    Simpan Perubahan
+                                </button>
                                 <button type="button"
                                         onclick="closeModal('modalEdit{{ forloop.counter }}')"
-                                        class="px-6 py-3 border rounded-lg hover:bg-gray-100">
+                                        class="w-full py-4 rounded-2xl border border-gray-200 text-gray-500 font-inter-semibold text-xs hover:bg-gray-50 transition-all uppercase tracking-widest">
                                     Batal
-                                </button>
-                                <button type="submit"
-                                        class="px-6 py-3 bg-[#2C2C2C] text-white rounded-lg hover:bg-black">
-                                    Simpan
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
 
+                {# ── Modal Hapus ── #}
                 <div id="modalHapus{{ forloop.counter }}"
-                     class="hidden fixed inset-0 bg-black/50 z-[9999] items-center justify-center px-4">
+                     class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[9999] items-center justify-center p-4"
+                     onclick="handleBackdropClick(event, 'modalHapus{{ forloop.counter }}')">
+                    <div class="bg-white w-full max-w-md rounded-[40px] shadow-2xl p-10 relative" onclick="event.stopPropagation()">
+                        <button type="button"
+                                onclick="closeModal('modalHapus{{ forloop.counter }}')"
+                                class="absolute top-8 right-8 text-gray-400 hover:text-gray-600 transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
 
-                    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl p-8">
-                        <h2 class="text-2xl font-semibold mb-5">Hapus Identitas?</h2>
-                        <p class="text-gray-600 mb-8">
-                            Yakin ingin menghapus dokumen <strong>{{ identitas.nomor }}</strong>?
+                        <div class="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center mb-6 text-red-500">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </div>
+
+                        <h2 class="text-3xl font-marcellus text-[#0A1D37] mb-3">Hapus Identitas?</h2>
+                        <p class="text-gray-500 text-sm mb-10 leading-relaxed">
+                            Dokumen <span class="font-inter-semibold text-gray-900">{{ identitas.nomor }}</span> akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.
                         </p>
 
                         <form method="POST" action="{% url 'member:identitas' %}">
@@ -172,15 +157,15 @@
                             <input type="hidden" name="action" value="hapus">
                             <input type="hidden" name="nomor" value="{{ identitas.nomor }}">
 
-                            <div class="flex justify-end gap-3">
+                            <div class="flex flex-col gap-3">
+                                <button type="submit"
+                                        class="w-full py-4 rounded-2xl bg-red-600 text-white font-inter-semibold text-xs hover:bg-red-700 transition-all shadow-lg uppercase tracking-widest">
+                                    Ya, Hapus
+                                </button>
                                 <button type="button"
                                         onclick="closeModal('modalHapus{{ forloop.counter }}')"
-                                        class="px-6 py-3 border rounded-lg hover:bg-gray-100">
+                                        class="w-full py-4 rounded-2xl border border-gray-200 text-gray-500 font-inter-semibold text-xs hover:bg-gray-50 transition-all uppercase tracking-widest">
                                     Batal
-                                </button>
-                                <button type="submit"
-                                        class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                                    Hapus
                                 </button>
                             </div>
                         </form>
@@ -189,8 +174,8 @@
 
                 {% empty %}
                 <tr>
-                    <td colspan="7" class="py-20 text-gray-400">
-                        Belum ada identitas.
+                    <td colspan="7" class="py-20 text-center text-gray-400 font-inter-semibold text-sm italic">
+                        Belum ada identitas yang terdaftar.
                     </td>
                 </tr>
                 {% endfor %}
@@ -199,18 +184,18 @@
     </div>
 </div>
 
+{# ── Modal Tambah ── #}
 <div id="modalTambah"
-     class="hidden fixed inset-0 bg-black/50 z-[9999] items-center justify-center px-4">
+     class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[9999] items-center justify-center p-4"
+     onclick="handleBackdropClick(event, 'modalTambah')">
+    <div class="bg-white w-full max-w-xl rounded-[40px] shadow-2xl p-10 relative" onclick="event.stopPropagation()">
+        <button type="button"
+                onclick="closeModal('modalTambah')"
+                class="absolute top-8 right-8 text-gray-400 hover:text-gray-600 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
 
-    <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl p-8">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-semibold">Tambah Identitas</h2>
-            <button type="button"
-                    onclick="closeModal('modalTambah')"
-                    class="text-2xl">
-                ×
-            </button>
-        </div>
+        <h2 class="text-3xl font-marcellus text-[#0A1D37] mb-8">Tambah Identitas</h2>
 
         <form method="POST" action="{% url 'member:identitas' %}">
             {% csrf_token %}
@@ -218,53 +203,49 @@
 
             <div class="space-y-4">
                 <div>
-                    <label class="block mb-1 text-sm font-semibold">Nomor Dokumen</label>
+                    <label class="block mb-1 text-xs font-inter-semibold text-gray-400 uppercase tracking-widest">Nomor Dokumen</label>
                     <input type="text" name="nomor" required
-                           class="w-full px-4 py-3 border rounded-lg"
+                           class="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1D37]/20"
                            placeholder="Contoh: A12345678">
                 </div>
-
                 <div>
-                    <label class="block mb-1 text-sm font-semibold">Jenis</label>
-                    <select name="jenis" required class="w-full px-4 py-3 border rounded-lg">
+                    <label class="block mb-1 text-xs font-inter-semibold text-gray-400 uppercase tracking-widest">Jenis</label>
+                    <select name="jenis" required class="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1D37]/20">
                         <option value="">Pilih jenis</option>
                         <option value="Paspor">Paspor</option>
                         <option value="KTP">KTP</option>
                         <option value="SIM">SIM</option>
                     </select>
                 </div>
-
                 <div>
-                    <label class="block mb-1 text-sm font-semibold">Negara Penerbit</label>
+                    <label class="block mb-1 text-xs font-inter-semibold text-gray-400 uppercase tracking-widest">Negara Penerbit</label>
                     <input type="text" name="negara" required
-                           class="w-full px-4 py-3 border rounded-lg"
+                           class="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1D37]/20"
                            placeholder="Indonesia">
                 </div>
-
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block mb-1 text-sm font-semibold">Tanggal Terbit</label>
+                        <label class="block mb-1 text-xs font-inter-semibold text-gray-400 uppercase tracking-widest">Tanggal Terbit</label>
                         <input type="date" name="tanggal_terbit" required
-                               class="w-full px-4 py-3 border rounded-lg">
+                               class="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1D37]/20">
                     </div>
-
                     <div>
-                        <label class="block mb-1 text-sm font-semibold">Tanggal Habis</label>
+                        <label class="block mb-1 text-xs font-inter-semibold text-gray-400 uppercase tracking-widest">Tanggal Habis</label>
                         <input type="date" name="tanggal_habis" required
-                               class="w-full px-4 py-3 border rounded-lg">
+                               class="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#0A1D37]/20">
                     </div>
                 </div>
             </div>
 
-            <div class="flex justify-end gap-3 mt-8">
+            <div class="flex flex-col gap-3 mt-10">
+                <button type="submit"
+                        class="w-full py-4 rounded-2xl bg-[#1a2b49] text-white font-inter-semibold text-xs hover:bg-[#253d66] transition-all shadow-lg uppercase tracking-widest">
+                    Simpan Identitas
+                </button>
                 <button type="button"
                         onclick="closeModal('modalTambah')"
-                        class="px-6 py-3 border rounded-lg hover:bg-gray-100">
+                        class="w-full py-4 rounded-2xl border border-gray-200 text-gray-500 font-inter-semibold text-xs hover:bg-gray-50 transition-all uppercase tracking-widest">
                     Batal
-                </button>
-                <button type="submit"
-                        class="px-6 py-3 bg-[#2C2C2C] text-white rounded-lg hover:bg-black">
-                    Simpan
                 </button>
             </div>
         </form>
@@ -276,12 +257,33 @@ function openModal(id) {
     const modal = document.getElementById(id);
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
 }
 
 function closeModal(id) {
     const modal = document.getElementById(id);
     modal.classList.add('hidden');
     modal.classList.remove('flex');
+    document.body.style.overflow = 'auto';
 }
+
+function handleBackdropClick(event, id) {
+    if (event.target === event.currentTarget) {
+        closeModal(id);
+    }
+}
+
+// Cegah double-submit
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', function () {
+            const btn = this.querySelector('button[type="submit"]');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Memproses...';
+            }
+        });
+    });
+});
 </script>
 {% endblock %}

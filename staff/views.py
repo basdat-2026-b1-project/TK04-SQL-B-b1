@@ -414,27 +414,42 @@ def login_required_staf(view_func):
 def laporan_view(request):
     if request.method == 'POST':
         action = request.POST.get('action')
-        
+
         if action == 'hapus_riwayat':
-            hapus_tipe = request.POST.get('hapus_tipe')
-            hapus_email = request.POST.get('hapus_email')
+            hapus_tipe      = request.POST.get('hapus_tipe')
+            hapus_email     = request.POST.get('hapus_email')
             hapus_timestamp = request.POST.get('hapus_timestamp')
-            
+
             try:
                 with connection.cursor() as cur:
                     if hapus_tipe == 'Redeem':
-                        cur.execute("DELETE FROM redeem WHERE email_member = %s AND timestamp = %s", [hapus_email, hapus_timestamp])
+                        cur.execute(
+                            "DELETE FROM redeem WHERE email_member = %s AND DATE_TRUNC('second', timestamp) = %s::timestamp",
+                            [hapus_email, hapus_timestamp]
+                        )
                     elif hapus_tipe == 'Package':
-                        cur.execute("DELETE FROM member_award_miles_package WHERE email_member = %s AND timestamp = %s", [hapus_email, hapus_timestamp])
+                        cur.execute(
+                            "DELETE FROM member_award_miles_package WHERE email_member = %s AND DATE_TRUNC('second', timestamp) = %s::timestamp",
+                            [hapus_email, hapus_timestamp]
+                        )
                     elif hapus_tipe == 'Transfer':
-                        cur.execute("DELETE FROM transfer WHERE email_member_1 = %s AND timestamp = %s", [hapus_email, hapus_timestamp])
+                        cur.execute(
+                            "DELETE FROM transfer WHERE email_member_1 = %s AND DATE_TRUNC('second', timestamp) = %s::timestamp",
+                            [hapus_email, hapus_timestamp]
+                        )
                     elif hapus_tipe == 'Klaim':
-                        cur.execute("DELETE FROM claim_missing_miles WHERE email_member = %s AND timestamp = %s", [hapus_email, hapus_timestamp])
-                
-                messages.success(request, f'Riwayat {hapus_tipe} berhasil dihapus.')
+                        cur.execute(
+                            "DELETE FROM claim_missing_miles WHERE email_member = %s AND DATE_TRUNC('second', timestamp) = %s::timestamp",
+                            [hapus_email, hapus_timestamp]
+                        )
+
+                    if cur.rowcount == 0:
+                        messages.warning(request, 'Data tidak ditemukan atau sudah dihapus sebelumnya.')
+                    else:
+                        messages.success(request, f'Riwayat {hapus_tipe} berhasil dihapus.')
             except Exception as e:
                 messages.error(request, f'Gagal menghapus riwayat: {str(e)}')
-            
+
             return redirect('staff:laporan')
 
     filter_tipe = request.GET.get('tipe', 'Semua')

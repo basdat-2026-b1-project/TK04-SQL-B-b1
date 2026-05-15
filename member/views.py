@@ -350,7 +350,10 @@ def redeem_view(request):
                         "INSERT INTO redeem (email_member, kode_hadiah, timestamp) VALUES (%s, %s, %s)",
                         [email_member, kode_hadiah, now]
                     )
-            
+                    cur.execute(
+                        "UPDATE member SET award_miles = award_miles - %s WHERE email = %s",
+                        [miles_dibutuhkan, email_member]
+                    )
                     saldo_baru = award_miles - miles_dibutuhkan
  
             # Sync ke session supaya request.session.award_miles di template keisi
