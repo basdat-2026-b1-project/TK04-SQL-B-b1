@@ -161,13 +161,33 @@ def kelola_member_view(request):
 
 @login_required_staf
 def dashboard(request):
+    email = request.session.get('email')
+
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT 
+                COUNT(*) FILTER (WHERE status_penerimaan = 'Menunggu') AS menunggu,
+                COUNT(*) FILTER (WHERE status_penerimaan = 'Disetujui') AS disetujui,
+                COUNT(*) FILTER (WHERE status_penerimaan = 'Ditolak') AS ditolak
+            FROM claim_missing_miles
+            WHERE email_staf = %s
+        """, [email])
+        klaim = cursor.fetchone()
+
     context = {
         'nama': request.session.get('nama', 'Nama Belum Diatur'),
-        'email': request.session.get('email', 'Email Belum Diatur'),
-        'telepon': request.session.get('mobile_number', '-'), 
+        'email': email,
+        'telepon': request.session.get('mobile_number', '-'),
         'kewarganegaraan': request.session.get('kewarganegaraan', 'Indonesia'),
         'tanggal_lahir': request.session.get('tanggal_lahir', '-'),
+        'id_staf': request.session.get('id_staf', '-'),
+        'maskapai': request.session.get('maskapai', '-'),
+        'klaim_menunggu': klaim[0] if klaim else 0,
+        'klaim_disetujui': klaim[1] if klaim else 0,
+        'klaim_ditolak': klaim[2] if klaim else 0,
     }
+
+    return render(request, 'staff/dashboard.html', context)
     
     with connection.cursor() as cursor:
         query = """
