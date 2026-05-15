@@ -1,90 +1,58 @@
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - AeroMiles</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Marcellus+SC&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Montserrat', sans-serif; background-color: #f9fafb; }
-        .font-marcellus { font-family: 'Marcellus SC', serif; }
-        .navbar-bg { background-color: #1a233a; }
-        .btn-primary { background-color: #333333; color: white; transition: 0.2s; }
-        .btn-primary:hover { background-color: #444444; }
-        .icon-bg { background-color: #3a5a9c; }
-        .card-shadow { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
-    </style>
-</head>
-<body class="text-gray-800">
 
-    <nav class="navbar-bg px-8 py-4 flex justify-between items-center text-white">
-        <div class="flex items-center space-x-2">
-            <svg class="w-8 h-8 fill-current" viewBox="0 0 24 24">
-                <path d="M21,16L22,19H2L3,16H3.82l2.3-7.53C6.32,7.74,7.02,7,7.87,7H16.13c0.85,0,1.55,0.74,1.75,1.47L20.18,16H21M17,16L15.3,10H8.7L7,16H17Z" />
+{% block title %}Login - AeroMiles{% endblock %}
+
+{% block content %}
+<style>
+    .icon-bg { background-color: #3a5a9c; }
+    .btn-primary { background-color: #333333; color: white; transition: 0.2s; }
+    .btn-primary:hover { background-color: #444444; }
+    .card-shadow { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+</style>
+
+<div class="flex flex-col items-center justify-center mt-20 px-4 mb-20">
+    
+    <div class="text-center mb-8">
+        <div class="icon-bg w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4 card-shadow">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
             </svg>
-            <span class="text-xl font-bold tracking-wider font-marcellus">AEROMILES</span>
         </div>
-        <div class="space-x-4">
-            <a href="{% url 'accounts:login' %}" class="border border-white/50 rounded-lg px-6 py-2 text-sm font-medium hover:bg-white/10 transition">LOGIN</a>
-            <a href="{% url 'accounts:register' %}" class="bg-gray-300 text-gray-800 rounded-lg px-6 py-2 text-sm font-medium hover:bg-gray-400 transition">Sign up</a>
-        </div>
-    </nav>
+        <h1 class="text-2xl font-bold text-gray-800">Selamat Datang</h1>
+        <p class="text-gray-500 text-sm mt-1">Masuk ke akun AeroMiles Anda</p>
+    </div>
 
-    <main class="flex flex-col items-center justify-center mt-20 px-4">
-        
-        <div class="text-center mb-8">
-            <div class="icon-bg w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4 card-shadow">
-                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                </svg>
-            </div>
-            <h1 class="text-2xl font-bold text-gray-800">Selamat Datang</h1>
-            <p class="text-gray-500 text-sm mt-1">Masuk ke akun AeroMiles Anda</p>
-        </div>
-
-        <div class="bg-white border border-gray-200 rounded-xl p-8 w-full max-w-md card-shadow">
+    <div class="bg-white border border-gray-200 rounded-xl p-8 w-full max-w-md card-shadow">
+        <form action="{% url 'accounts:login' %}" method="POST" class="space-y-6">
+            {% csrf_token %}
             
-            {% if messages %}
-                {% for message in messages %}
-                <div class="mb-4 p-3 rounded {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %} text-sm">
-                    {{ message }}
-                </div>
-                {% endfor %}
-            {% endif %}
-
-            <form action="{% url 'accounts:login' %}" method="POST" class="space-y-6">
-                {% csrf_token %}
-                
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Email <span class="text-red-500">*</span></label>
-                    <input type="email" name="email" required
-                           class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none placeholder-gray-400"
-                           placeholder="email@example.com">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Password <span class="text-red-500">*</span></label>
-                    <input type="password" name="password" required
-                           class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none placeholder-gray-400"
-                           placeholder="*********">
-                </div>
-
-                <button type="submit" class="w-full btn-primary py-3 rounded-md font-bold text-sm tracking-wide transition duration-200">
-                    Sign In
-                </button>
-            </form>
-
-            <div class="mt-4 flex justify-between">
-                <a href="#" class="text-xs text-gray-500 hover:text-[#3a5a9c] transition underline">Lupa password?</a>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Email <span class="text-red-500">*</span></label>
+                <input type="email" name="email" required
+                       class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none placeholder-gray-400"
+                       placeholder="email@example.com">
             </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Password <span class="text-red-500">*</span></label>
+                <input type="password" name="password" required
+                       class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none placeholder-gray-400"
+                       placeholder="*********">
+            </div>
+
+            <button type="submit" class="w-full btn-primary py-3 rounded-md font-bold text-sm tracking-wide transition duration-200">
+                Sign In
+            </button>
+        </form>
+
+        <div class="mt-4 flex justify-between">
+            <a href="#" class="text-xs text-gray-500 hover:text-[#3a5a9c] transition underline">Lupa password?</a>
         </div>
+    </div>
 
-        <p class="mt-8 text-sm text-gray-500">
-            Belum punya akun? <a href="{% url 'accounts:register' %}" class="text-[#3a5a9c] font-semibold hover:underline">Daftar sekarang</a>
-        </p>
-    </main>
-
-</body>
-</html>
+    <p class="mt-8 text-sm text-gray-500">
+        Belum punya akun? <a href="{% url 'accounts:register' %}" class="text-[#3a5a9c] font-semibold hover:underline">Daftar sekarang</a>
+    </p>
+</div>
+{% endblock content %}
