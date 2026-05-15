@@ -22,23 +22,6 @@ DUMMY_MEMBERS = [
      'tier': 'Platinum', 'total_miles': 120000, 'award_miles': 95000, 'bergabung': '2022-05-01'},
 ]
 
-DUMMY_KLAIM_STAF = [
-    {'id': 'CLM-001', 'member': 'John W. Doe', 'email': 'john@example.com',
-     'maskapai': 'GA', 'rute': 'CGK → DPS', 'tanggal': '2024-10-01',
-     'flight': 'GA404', 'kelas': 'Business', 'pengajuan': '2024-10-05 18:45:00', 'status': 'Disetujui'},
-    {'id': 'CLM-002', 'member': 'John W. Doe', 'email': 'john@example.com',
-     'maskapai': 'SQ', 'rute': 'SIN → NRT', 'tanggal': '2024-11-15',
-     'flight': 'SQ12', 'kelas': 'Economy', 'pengajuan': '2024-11-20 18:45:00', 'status': 'Menunggu'},
-    {'id': 'CLM-003', 'member': 'Jane Smith', 'email': 'jane@example.com',
-     'maskapai': 'GA', 'rute': 'CGK → SUB', 'tanggal': '2024-12-01',
-     'flight': 'GA310', 'kelas': 'Economy', 'pengajuan': '2024-12-05 18:45:00', 'status': 'Ditolak'},
-    {'id': 'CLM-004', 'member': 'Budi A. Santoso', 'email': 'budi@example.com',
-     'maskapai': 'MH', 'rute': 'KUL → BKK', 'tanggal': '2025-01-10',
-     'flight': 'MH780', 'kelas': 'Premium Economy', 'pengajuan': '2025-01-15 18:45:00', 'status': 'Menunggu'},
-    {'id': 'CLM-005', 'member': 'Ms. Sari Dewi', 'email': 'sari@example.com',
-     'maskapai': 'GA', 'rute': 'CGK → SIN', 'tanggal': '2025-02-20',
-     'flight': 'GA830', 'kelas': 'First', 'pengajuan': '2025-02-22 10:00:00', 'status': 'Menunggu'},
-]
 
 DUMMY_HADIAH_STAF = [
     {'kode': 'RWD-001', 'nama': 'Tiket Domestik PP', 'deskripsi': 'Tiket pulang-pergi domestik',
@@ -83,15 +66,6 @@ DUMMY_TRANSAKSI_LAPORAN = [
      'jumlah': -2000, 'timestamp': '2025-02-10 14:00'},
     {'tipe': 'Package', 'member': 'John W. Doe', 'email': 'john@example.com',
      'jumlah': 10000, 'timestamp': '2025-03-01 08:00'},
-]
-
-DUMMY_TOP_MEMBERS = [
-    {'rank': 1, 'member': 'Ms. Sari Dewi', 'email': 'sari@example.com',
-     'total_miles': 120000, 'jumlah_transaksi': 15},
-    {'rank': 2, 'member': 'Mr. John William Doe', 'email': 'john@example.com',
-     'total_miles': 45000, 'jumlah_transaksi': 8},
-    {'rank': 3, 'member': 'Mrs. Jane Smith', 'email': 'jane@example.com',
-     'total_miles': 20000, 'jumlah_transaksi': 4},
 ]
 
 TIER_CHOICES = ['Blue', 'Silver', 'Gold', 'Platinum']
@@ -204,32 +178,98 @@ def dashboard(request):
     }
     return render(request, 'staff/dashboard.html', context)
 
+from django.db import connection
+
+# ... (Pastikan decorator @login_required_staf tetap ada)
+
+@login_required_staf
 def kelola_klaim_view(request):
     filter_status = request.GET.get('status', 'Semua')
     filter_maskapai = request.GET.get('maskapai', 'Semua')
 
+    # logic update status yang akan membuat trigger terexecute
     if request.method == 'POST':
         action = request.POST.get('action')
         klaim_id = request.POST.get('klaim_id')
-        if action == 'setujui':
-            messages.success(request, f'Klaim {klaim_id} berhasil disetujui. Miles ditambahkan ke akun member.')
-        elif action == 'tolak':
-            messages.warning(request, f'Klaim {klaim_id} telah ditolak.')
+
+        # tentukan status baru berdasarkan tombol yang ditekan
+        status_baru = 'Disetujui' if action == 'setujui' else 'Ditolak'
+
+        try:
+            with connection.cursor() as cursor:
+                # raw query untuk mengupdate status
+                cursor.execute("""
+                    UPDATE CLAIM_MISSING_MILES
+                    SET status_penerimaan = %s
+                    WHERE id = %s
+                """, [status_baru, klaim_id])
+            
+            # jika aksi Ditolak (tidak memicu exception trigger)
+            if action == 'tolak':
+                messages.warning(request, f'Klaim {klaim_id} telah ditolak.')
+                
+        except Exception as e:
+            # menangkap pesan EXCEPTION langsung dari Trigger PostgreSQL
+            pesan_trigger = str(e).split('\n')[0].strip() # Ambil baris pertama saja
+            
+            # karena trigger mengirim text berawalan "SUKSES:", kita parse pesannya
+            if "SUKSES:" in pesan_trigger:
+                pesan_bersih = pesan_trigger.replace('SUKSES: ', '')
+                messages.success(request, pesan_bersih)
+            else:
+                messages.error(request, pesan_trigger)
+
         return redirect('staff:kelola_klaim')
 
-    klaim_list = DUMMY_KLAIM_STAF
+    # logic untuk ambil data claim
+    klaim_list = []
+    
+    # membuat filter query secara dinamis
+    where_clauses = []
+    params = []
+    
     if filter_status != 'Semua':
-        klaim_list = [k for k in klaim_list if k['status'] == filter_status]
+        where_clauses.append("c.status_penerimaan = %s")
+        params.append(filter_status)
     if filter_maskapai != 'Semua':
-        klaim_list = [k for k in klaim_list if k['maskapai'] == filter_maskapai]
+        where_clauses.append("m.kode_maskapai = %s")
+        params.append(filter_maskapai)
+        
+    where_sql = ""
+    if where_clauses:
+        where_sql = "WHERE " + " AND ".join(where_clauses)
+
+    query = f"""
+        SELECT 
+            c.id, 
+            p.first_mid_name || ' ' || p.last_name AS member, 
+            c.email_member AS email,
+            m.kode_maskapai AS maskapai, 
+            c.bandara_asal || ' → ' || c.bandara_tujuan AS rute, 
+            c.tanggal_penerbangan AS tanggal,
+            c.flight_number AS flight, 
+            c.kelas_kabin AS kelas, 
+            c.timestamp AS pengajuan, 
+            c.status_penerimaan AS status
+        FROM CLAIM_MISSING_MILES c
+        JOIN PENGGUNA p ON c.email_member = p.email
+        JOIN MASKAPAI m ON c.maskapai = m.kode_maskapai
+        {where_sql}
+        ORDER BY c.timestamp DESC
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params)
+        columns = [col[0] for col in cursor.description]
+        # ubah hasil query menjadi list of dictionary agar mudah dibaca template html
+        klaim_list = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
     return render(request, 'staff/kelola_klaim.html', {
         'klaim_list': klaim_list,
         'filter_status': filter_status,
         'filter_maskapai': filter_maskapai,
-        'maskapai_list': ['GA', 'QG', 'JT', 'SQ', 'MH'],
+        'maskapai_list': ['GA', 'QG', 'JT', 'SQ', 'MH'], 
     })
-
 @login_required_staf
 def kelola_hadiah_view(request):
     if request.method == 'POST':
@@ -481,27 +521,24 @@ def laporan_view(request):
 
     # ── Top members ──────────────────────────────────────────
     with connection.cursor() as cur:
-        cur.execute("""
-            SELECT
-                p.first_mid_name || ' ' || p.last_name AS member,
-                m.total_miles,
-                (
-                    SELECT COUNT(*) FROM redeem r   WHERE r.email_member = m.email
-                ) +
-                (
-                    SELECT COUNT(*) FROM member_award_miles_package mp WHERE mp.email_member = m.email
-                ) +
-                (
-                    SELECT COUNT(*) FROM transfer t
-                    WHERE t.email_member_1 = m.email OR t.email_member_2 = m.email
-                ) AS jumlah_transaksi
-            FROM member m
-            JOIN pengguna p ON p.email = m.email
-            ORDER BY m.total_miles DESC
-            LIMIT 10
-        """)
-        cols        = [c.name for c in cur.description]
-        top_members = [dict(zip(cols, row)) for row in cur.fetchall()]
+        # panggil Stored Procedure (Function) yang sudah dibuat di Supabase
+        cur.execute("SELECT * FROM get_top_5_members()")
+        cols = [c.name for c in cur.description]
+        
+        # ambil semua datanya
+        raw_top_members = cur.fetchall()
+        
+        if raw_top_members:
+            # ubah jadi list of dictionary agar gampang dibaca HTML
+            top_members = [dict(zip(cols, row)) for row in raw_top_members]
+            
+            # ambil pesan_sukses dari baris pertama data (karena pesannya sama di semua baris)
+            pesan_prosedur = top_members[0]['pesan_sukses']
+            
+            # tampilkan pesan ke toast django
+            messages.success(request, pesan_prosedur)
+        else:
+            top_members = []
 
     return render(request, 'staff/laporan.html', {
         'transaksi'             : transaksi,

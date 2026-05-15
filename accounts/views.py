@@ -125,13 +125,7 @@ def register_view(request):
             messages.error(request, 'Email tidak boleh kosong.')
             return render(request, 'accounts/register.html', {'maskapai_choices': MASKAPAI_CHOICES})
 
-        # Cek apakah email sudah ada
-        with connection.cursor() as cur:
-            cur.execute("SELECT email FROM pengguna WHERE email = %s", [email])
-            if cur.fetchone():
-                messages.error(request, 'Email sudah terdaftar.')
-                return render(request, 'accounts/register.html', {'maskapai_choices': MASKAPAI_CHOICES})
-
+        # ambil data form
         hashed_password = make_password(password)
         salutation      = request.POST.get('salutation', '')
         first_mid_name  = request.POST.get('first_mid_name', '')
@@ -141,8 +135,9 @@ def register_view(request):
         tanggal_lahir   = request.POST.get('tanggal_lahir') or None
         kewarganegaraan = request.POST.get('kewarganegaraan') or None
 
+        # insertion and auto increment
         with connection.cursor() as cur:
-            # Insert ke pengguna
+            # insert ke pengguna 
             cur.execute("""
                 INSERT INTO pengguna (
                     email, password, salutation, first_mid_name, last_name,
@@ -151,11 +146,16 @@ def register_view(request):
             """, [email, hashed_password, salutation, first_mid_name, last_name,
                   country_code, mobile_number, tanggal_lahir, kewarganegaraan])
 
+            # insert ke tabel spesifik berdasarkan roleny
             if role == 'member':
-                # Generate nomor member
-                cur.execute("SELECT COUNT(*) FROM member")
-                count        = cur.fetchone()[0]
-                nomor_member = f"M{count + 1:04d}"
+                # generate nomor member menggunakan MAX()
+                cur.execute("""
+                    SELECT MAX(CAST(SUBSTRING(nomor_member FROM 2) AS INTEGER)) 
+                    FROM member
+                """)
+                max_id = cur.fetchone()[0]
+                next_number = 1 if max_id is None else max_id + 1
+                nomor_member = f"M{next_number:04d}"
 
                 cur.execute("""
                     INSERT INTO member (email, nomor_member, tanggal_bergabung, id_tier, award_miles, total_miles)
@@ -164,9 +164,15 @@ def register_view(request):
 
             elif role == 'staf':
                 kode_maskapai = request.POST.get('kode_maskapai', '')
-                cur.execute("SELECT COUNT(*) FROM staf")
-                count   = cur.fetchone()[0]
-                id_staf = f"S{count + 1:04d}"
+                
+                # generate id staf menggunakan MAX()
+                cur.execute("""
+                    SELECT MAX(CAST(SUBSTRING(id_staf FROM 2) AS INTEGER)) 
+                    FROM staf
+                """)
+                max_id = cur.fetchone()[0]
+                next_number = 1 if max_id is None else max_id + 1
+                id_staf = f"S{next_number:04d}"
 
                 cur.execute("""
                     INSERT INTO staf (email, id_staf, kode_maskapai)
