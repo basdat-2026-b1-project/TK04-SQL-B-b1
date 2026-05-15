@@ -16,15 +16,6 @@
         </p>
     </div>
 
-    <!-- Alert Messages -->
-    {% if messages %}
-        {% for message in messages %}
-            <div class="mb-6 p-4 rounded-xl {% if message.tags == 'error' %}bg-red-50 text-red-700 border-red-100{% else %}bg-green-50 text-green-700 border-green-100{% endif %} border font-inter-semibold text-xs">
-                {{ message }}
-            </div>
-        {% endfor %}
-    {% endif %}
-
     <!-- Tab Navigation -->
     <div class="inline-flex bg-[#E2E4E7] p-1 rounded-xl mb-10 font-inter-semibold text-[11px]">
         <button onclick="switchTab('katalog')" id="btn-katalog" 
@@ -98,18 +89,23 @@
     </div>
 </div> <!-- Penutup container utama -->
 
-<!-- Modal Redeem (Fixed Position) -->
-<div id="modalRedeem" class="fixed inset-0 bg-gray-900/60 z-[9999] hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-[32px] p-10 max-w-lg w-full shadow-2xl relative">
-        <h2 class="text-2xl font-marcellus text-[#0A1D37] mb-4">Konfirmasi Redeem</h2>
-        <p id="modal-text" class="text-gray-600 text-sm mb-10 leading-relaxed"></p>
+<div id="modalRedeem"
+     class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[9999] hidden flex items-center justify-center p-4"
+     onclick="if(event.target===this) tutupModalRedeem()">
+    <div class="bg-white rounded-[40px] p-10 max-w-lg w-full shadow-2xl relative">
+        <button onclick="tutupModalRedeem()" class="absolute top-8 right-8 text-gray-400 hover:text-gray-600 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+
+        <h2 class="text-3xl font-marcellus text-[#0A1D37] mb-4">Konfirmasi Redeem</h2>
+        <p id="modal-text" class="text-gray-500 text-sm mb-10 leading-relaxed"></p>
 
         <form method="POST">
             {% csrf_token %}
             <input type="hidden" name="kode_hadiah" id="input_kode_hadiah">
-            <div class="flex justify-end gap-3 font-inter-semibold">
-                <button type="button" onclick="tutupModalRedeem()" class="px-8 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-xs hover:bg-gray-50">Batal</button>
-                <button type="submit" class="px-8 py-2.5 rounded-xl bg-[#0A1D37] text-white text-xs hover:bg-black transition-all shadow-lg uppercase">Redeem Sekarang</button>
+            <div class="flex flex-col gap-3 font-inter-semibold">
+                <button type="submit" class="w-full py-4 rounded-2xl bg-[#1a2b49] text-white text-xs hover:bg-[#253d66] transition-all shadow-lg uppercase tracking-widest font-inter-semibold">Redeem Sekarang</button>
+                <button type="button" onclick="tutupModalRedeem()" class="w-full py-4 rounded-2xl border border-gray-200 text-gray-500 text-xs hover:bg-gray-50 transition-all uppercase tracking-widest">Batal</button>
             </div>
         </form>
     </div>
@@ -147,11 +143,23 @@
         document.getElementById('modal-text').innerHTML = `Anda akan menukarkan <b>${Number(miles).toLocaleString()} miles</b> untuk mendapatkan <b>${nama}</b> dari ${penyedia}. Konfirmasi penukaran?`;
         document.getElementById('modalRedeem').classList.remove('hidden');
         document.getElementById('modalRedeem').classList.add('flex');
+        document.body.style.overflow = 'hidden';
     }
 
     function tutupModalRedeem() {
         document.getElementById('modalRedeem').classList.add('hidden');
         document.getElementById('modalRedeem').classList.remove('flex');
+        document.body.style.overflow = 'auto';
     }
+
+    // Cegah double-submit
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function () {
+                const btn = this.querySelector('button[type="submit"]');
+                if (btn) { btn.disabled = true; btn.textContent = 'Memproses...'; }
+            });
+        });
+    });
 </script>
 {% endblock extra_js %}
