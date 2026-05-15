@@ -5,8 +5,24 @@
 
 {% block content %}
 
-    <div class="max-w-6xl mx-auto px-4 py-8">
+{% if messages %}
+    <div class="fixed bottom-5 right-5 z-[100] space-y-3">
+        {% for message in messages %}
+        <div class="px-6 py-4 rounded-xl shadow-2xl text-white font-bold flex items-center animate-bounce
+            {% if message.tags == 'success' %} bg-[#38ac38] {% else %} bg-[#d13232] {% endif %}">
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    <script>
+        setTimeout(() => {
+            const msgs = document.querySelectorAll('.animate-bounce');
+            msgs.forEach(m => m.style.display = 'none');
+        }, 5000);
+    </script>
+{% endif %}
 
+    <div class="max-w-6xl mx-auto px-4 py-8">
         <div class="flex justify-between items-center mb-6">
             <div>
                 <h2 class="text-2xl font-bold text-gray-800">Manajemen Hadiah & Penyedia</h2>
@@ -90,7 +106,7 @@
                         <select name="penyedia_name" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none bg-white">
                             <option value="">Pilih...</option>
                             {% for val, label in penyedia_choices %}
-                            <option value="{{ label }}">{{ label }}</option>
+                            <option value="{{ val }}">{{ label }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -151,7 +167,7 @@
                         <select name="penyedia_name" id="edit_penyedia" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#3a5a9c] focus:outline-none bg-white">
                             <option value="">Pilih...</option>
                             {% for val, label in penyedia_choices %}
-                            <option value="{{ label }}">{{ label }}</option>
+                            <option value="{{ val }}">{{ label }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -208,21 +224,30 @@
 {% endblock content %}
 
 {% block extra_js %}
-<script>
-    function openEditModal(kode, nama, penyedia, miles, deskripsi, start, end) {
-        document.getElementById('edit_kode').value = kode;
-        document.getElementById('edit_nama').value = nama;
-        document.getElementById('edit_penyedia').value = penyedia;
-        document.getElementById('edit_miles').value = miles;
-        document.getElementById('edit_deskripsi').value = deskripsi;
-        document.getElementById('edit_start').value = start;
-        document.getElementById('edit_end').value = end;
-        toggleModal('modalEditHadiah');
-    }
+    <script>
+        function toggleModal(modalID) {
+            const modal = document.getElementById(modalID);
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
 
-    function openDeleteModal(kode) {
-        document.getElementById('delete_kode').value = kode;
-        toggleModal('modalHapusHadiah');
-    }
-</script>
+        function openEditModal(kode, nama, penyedia, miles, deskripsi, start, end) {
+            document.getElementById('edit_kode').value = kode;
+            document.getElementById('edit_nama').value = nama;
+            document.getElementById('edit_penyedia').value = penyedia;
+            document.getElementById('edit_miles').value = miles;
+            document.getElementById('edit_deskripsi').value = deskripsi;
+            document.getElementById('edit_start').value = start;
+            document.getElementById('edit_end').value = end;
+            toggleModal('modalEditHadiah');
+        }
+
+        function openDeleteModal(kode) {
+            document.getElementById('delete_kode').value = kode;
+            toggleModal('modalHapusHadiah');
+        }
+    </script>
 {% endblock extra_js %}

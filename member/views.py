@@ -1,105 +1,12 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.humanize.templatetags.humanize import intcomma
-from datetime import date
-from django.shortcuts import render, redirect
-from django.contrib import messages
 from django.utils import timezone
-from django.db import connection, transaction
+from django.db import connection
 from datetime import date
-
-DUMMY_IDENTITAS = [
-    {'nomor': 'A12345678', 'jenis': 'Paspor', 'negara': 'Indonesia',
-     'tanggal_terbit': '2020-01-15', 'tanggal_habis': '2030-01-15', 'status': 'Aktif'},
-    {'nomor': '327501234567890', 'jenis': 'KTP', 'negara': 'Indonesia',
-     'tanggal_terbit': '2019-06-01', 'tanggal_habis': '2024-06-01', 'status': 'Kedaluwarsa'},
-    {'nomor': 'SIM0001', 'jenis': 'SIM', 'negara': 'Indonesia',
-     'tanggal_terbit': '2023-03-10', 'tanggal_habis': '2028-03-10', 'status': 'Aktif'},
-]
-
-DUMMY_MASKAPAI = [
-    ('GA', 'GA - Garuda Indonesia'),
-    ('QG', 'QG - Citilink'),
-    ('JT', 'JT - Lion Air'),
-    ('ID', 'ID - Batik Air'),
-    ('SQ', 'SQ - Singapore Airlines'),
-]
-
-DUMMY_BANDARA = [
-    ('CGK', 'CGK - Soekarno-Hatta, Jakarta'),
-    ('DPS', 'DPS - Ngurah Rai, Bali'),
-    ('SUB', 'SUB - Juanda, Surabaya'),
-    ('SIN', 'SIN - Changi, Singapore'),
-    ('NRT', 'NRT - Narita, Tokyo'),
-    ('KUL', 'KUL - KLIA, Kuala Lumpur'),
-    ('BKK', 'BKK - Suvarnabhumi, Bangkok'),
-    ('HKG', 'HKG - Chek Lap Kok, Hong Kong'),
-    ('SYD', 'SYD - Kingsford Smith, Sydney'),
-    ('ICN', 'ICN - Incheon, Seoul'),
-]
-
-DUMMY_KLAIM = [
-    {'id': 'CLM-001', 'maskapai': 'GA', 'rute': 'CGK → DPS',
-     'tanggal': '2024-10-01', 'flight': 'GA404', 'kelas': 'Business',
-     'status': 'Disetujui', 'timestamp': '2024-10-05 18:45:00'},
-    {'id': 'CLM-002', 'maskapai': 'SQ', 'rute': 'SIN → NRT',
-     'tanggal': '2024-11-15', 'flight': 'SQ12', 'kelas': 'Economy',
-     'status': 'Menunggu', 'timestamp': '2024-11-20 18:45:00'},
-    {'id': 'CLM-003', 'maskapai': 'GA', 'rute': 'CGK → SUB',
-     'tanggal': '2025-01-10', 'flight': 'GA202', 'kelas': 'Economy',
-     'status': 'Ditolak', 'timestamp': '2025-01-12 09:30:00'},
-]
-
-DUMMY_TRANSFER = [
-    {'timestamp': '2025-01-15 10:30', 'member': 'Jane Smith',
-     'email': 'jane@example.com', 'jumlah': -5000, 'catatan': 'Hadiah ulang tahun', 'tipe': 'Kirim'},
-    {'timestamp': '2025-02-01 14:00', 'member': 'Budi A. Santoso',
-     'email': 'budi@example.com', 'jumlah': 2000, 'catatan': '-', 'tipe': 'Terima'},
-]
-
-DUMMY_HADIAH = [
-    {'kode': 'RWD-001', 'nama': 'Tiket Domestik PP', 'penyedia': 'Garuda Indonesia',
-     'miles': 15000, 'deskripsi': 'Tiket pulang-pergi rute domestik Indonesia',
-     'valid_start': '2024-01-01', 'program_end': '2025-12-31'},
-    {'kode': 'RWD-002', 'nama': 'Upgrade Business Class', 'penyedia': 'Garuda Indonesia',
-     'miles': 25000, 'deskripsi': 'Upgrade dari economy ke business class',
-     'valid_start': '2026-01-01', 'program_end': '2027-01-01'},
-    {'kode': 'RWD-003', 'nama': 'Voucher Hotel Rp500.000', 'penyedia': 'TravelokaPartner',
-     'miles': 8000, 'deskripsi': 'Voucher hotel berlaku di seluruh Indonesia',
-     'valid_start': '2024-06-01', 'program_end': '2025-06-30'},
-    {'kode': 'RWD-004', 'nama': 'Akses Lounge 1x', 'penyedia': 'Plaza Premium',
-     'miles': 3000, 'deskripsi': 'Akses lounge bandara premium 1 kali kunjungan',
-     'valid_start': '2024-01-01', 'program_end': '2025-12-31'},
-    {'kode': 'RWD-005', 'nama': 'Extra Bagasi 10kg', 'penyedia': 'Garuda Indonesia',
-     'miles': 5000, 'deskripsi': 'Tambahan bagasi 10kg untuk 1 penerbangan',
-     'valid_start': '2025-01-01', 'program_end': '2026-12-31'},
-]
-
-DUMMY_RIWAYAT_REDEEM = [
-    {'hadiah': 'Akses Lounge 1x', 'timestamp': '2025-01-20 16:00', 'miles': -3000},
-]
-
-DUMMY_PACKAGES = [
-    {'id': 'AMP-001', 'miles': 1000, 'harga': 'Rp 150.000'},
-    {'id': 'AMP-002', 'miles': 5000, 'harga': 'Rp 650.000'},
-    {'id': 'AMP-003', 'miles': 10000, 'harga': 'Rp 1.200.000'},
-    {'id': 'AMP-004', 'miles': 25000, 'harga': 'Rp 2.750.000'},
-    {'id': 'AMP-005', 'miles': 50000, 'harga': 'Rp 5.000.000'},
-]
-
-DUMMY_TIERS = [
-    {'id': 'BLUE', 'nama': 'Blue', 'min_frekuensi': 0, 'min_miles': 0,
-     'keuntungan': ['Akumulasi miles dasar', 'Akses penawaran khusus member']},
-    {'id': 'SILVER', 'nama': 'Silver', 'min_frekuensi': 10, 'min_miles': 15000,
-     'keuntungan': ['Bonus miles 25%', 'Priority check-in', 'Akses lounge partner']},
-    {'id': 'GOLD', 'nama': 'Gold', 'min_frekuensi': 25, 'min_miles': 40000,
-     'keuntungan': ['Bonus miles 50%', 'Priority boarding', 'Akses lounge premium', 'Extra bagasi 10kg']},
-    {'id': 'PLATINUM', 'nama': 'Platinum', 'min_frekuensi': 50, 'min_miles': 80000,
-     'keuntungan': ['Bonus miles 100%', 'Upgrade gratis', 'Akses lounge first class', 'Extra bagasi 20kg', 'Dedicated hotline']},
-]
 
 def login_required_member(view_func):
-    """Simple decorator untuk cek session member"""
+    """simple decorator untuk cek session member"""
     def wrapper(request, *args, **kwargs):
         if not request.session.get('role'):
             return redirect('accounts:login')
@@ -171,6 +78,8 @@ def identitas_view(request):
         'identitas_list': DUMMY_IDENTITAS,
     })
 
+
+@login_required_member
 def claim_list(request):
     filter_status = request.GET.get('status', 'Semua')
 
@@ -187,7 +96,22 @@ def claim_list(request):
             nomor_tiket = request.POST.get('nomor_tiket')
             pnr = request.POST.get('pnr')
 
-            messages.success(request, f'Klaim untuk penerbangan {flight_number} ({asal} - {tujuan}) berhasil diajukan.')
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        INSERT INTO claim_missing_miles 
+                        (email_member, maskapai, bandara_asal, bandara_tujuan, tanggal_penerbangan, flight_number, nomor_tiket, pnr, kelas_kabin, status_penerimaan, timestamp)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'Menunggu', CURRENT_TIMESTAMP)
+                    """, [email, maskapai, asal, tujuan, tanggal, flight_number, nomor_tiket, pnr, kelas])
+                    
+                messages.success(request, 'Klaim berhasil diajukan!')
+            except Exception as e:
+                # Modifikasi tangkapan pesan error jika trigger duplikat klaim berjalan
+                pesan_error = str(e).split('\n')[0].strip()
+                if "ERROR:" in pesan_error:
+                    messages.error(request, pesan_error)
+                else:
+                    messages.error(request, f'Gagal mengajukan klaim: {pesan_error}')
             return redirect('member:claim_list')
         
         elif action == 'edit':
@@ -217,6 +141,8 @@ def claim_list(request):
         'status_choices': ['Semua', 'Menunggu', 'Disetujui', 'Ditolak'],
     })
 
+
+@login_required_member
 def transfer_view(request):
     member_dummy = {
         'nama_lengkap': 'Nisrina Alya',
@@ -242,268 +168,236 @@ def transfer_view(request):
         elif jumlah > member_dummy['award_miles']:
             messages.error(request, f'Award miles tidak mencukupi. Saldo Anda: {member_dummy["award_miles"]} miles.')
         else:
-            messages.success(request, f'Berhasil transfer {jumlah} miles ke {email_penerima}.')
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT email FROM member WHERE email=%s", [email_penerima])
+                    if not cursor.fetchone():
+                        messages.error(request, 'Member penerima tidak ditemukan.')
+                    else:
+                        # FIX: Cek berdasarkan award_miles, bukan total_miles
+                        cursor.execute("SELECT award_miles FROM member WHERE email=%s", [email])
+                        saldo = cursor.fetchone()[0]
+                        if jumlah > saldo:
+                            # FIX: Pesan Error sesuai requirements
+                            messages.error(request, f'ERROR: Saldo award miles tidak mencukupi. Saldo Anda saat ini: {saldo} miles, jumlah transfer: {jumlah} miles.')
+                        else:
+                            cursor.execute("""
+                                INSERT INTO transfer (email_member_1, email_member_2, jumlah, catatan)
+                                VALUES (%s, %s, %s, %s)
+                            """, [email, email_penerima, jumlah, catatan])
+                            # FIX: Pesan Sukses sesuai requirements
+                            messages.success(request, f'SUKSES: Transfer {jumlah} miles dari "{email}" ke "{email_penerima}" berhasil dicatat.')
+            except Exception as e:
+                pesan_error = str(e).split('\n')[0].strip()
+                if "ERROR:" in pesan_error:
+                    messages.error(request, pesan_error)
+                else:
+                    messages.error(request, f'Gagal melakukan transfer: {pesan_error}')
         
         return redirect('member:transfer')
 
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT p.first_mid_name || ' ' || p.last_name AS nama_lengkap, m.email AS email_pengguna, m.award_miles AS award_miles
+            FROM member m JOIN pengguna p ON m.email = p.email WHERE m.email = %s
+        """, [email])
+        member_data = dict(zip(['nama_lengkap', 'email_pengguna', 'award_miles'], cursor.fetchone()))
+
+        cursor.execute("""
+            SELECT timestamp, email_member_2 AS email, p.first_mid_name || ' ' || p.last_name AS member, -jumlah AS jumlah, catatan, 'Kirim' AS tipe
+            FROM transfer t JOIN pengguna p ON t.email_member_2 = p.email WHERE t.email_member_1 = %s
+            UNION ALL
+            SELECT timestamp, email_member_1 AS email, p.first_mid_name || ' ' || p.last_name AS member, jumlah AS jumlah, catatan, 'Terima' AS tipe
+            FROM transfer t JOIN pengguna p ON t.email_member_1 = p.email WHERE t.email_member_2 = %s
+            ORDER BY timestamp DESC
+        """, [email, email])
+        cols = [col[0] for col in cursor.description]
+        transfer_list = [dict(zip(cols, row)) for row in cursor.fetchall()]
+
     return render(request, 'member/transfer.html', {
-        'member': member_dummy,
-        'transfer_list': DUMMY_TRANSFER,
-        'email_session': member_dummy['email_pengguna']
+        'member': member_data,
+        'transfer_list': transfer_list,
+        'email_session': email
     })
 
+@login_required_member
+def dashboard(request):
+    email = request.session.get('email')
+    
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT p.first_mid_name || ' ' || p.last_name AS nama, 
+                p.mobile_number AS telepon, 
+                p.kewarganegaraan AS kewarganegaraan, 
+                p.tanggal_lahir, 
+                m.award_miles, m.total_miles, t.nama AS tier_nama
+            FROM member m 
+            JOIN pengguna p ON m.email = p.email 
+            JOIN tier t ON m.id_tier = t.id_tier
+            WHERE m.email = %s
+        """, [email])
+        row = cursor.fetchone()
+        
+        context = {
+            'nama': row[0] if row else request.session.get('nama', 'Nama Belum Diatur'),
+            'email': email,
+            'telepon': row[1] if row else request.session.get('mobile_number', '-'), 
+            'kewarganegaraan': row[2] if row else request.session.get('kewarganegaraan', 'Indonesia'),
+            'tanggal_lahir': row[3] if row else request.session.get('tanggal_lahir', '-'),
+            'nomor_member': request.session.get('nomor_member', 'Belum Ada'),
+            'tier': row[6] if row else request.session.get('tier', 'BLUE'),
+            'total_miles': row[5] if row else request.session.get('total_miles', 0),
+            'award_miles': row[4] if row else request.session.get('award_miles', 0),
+        }
+
+        cursor.execute("""
+            SELECT tipe, timestamp, jumlah AS miles FROM (
+                SELECT 'Transfer Keluar' AS tipe, timestamp, -jumlah AS jumlah FROM transfer WHERE email_member_1 = %s
+                UNION ALL
+                SELECT 'Transfer Masuk' AS tipe, timestamp, jumlah AS jumlah FROM transfer WHERE email_member_2 = %s
+                UNION ALL
+                SELECT 'Redeem' AS tipe, r.timestamp, -h.miles AS jumlah FROM redeem r JOIN hadiah h ON r.kode_hadiah = h.kode_hadiah WHERE r.email_member = %s
+                UNION ALL
+                SELECT 'Package' AS tipe, mp.timestamp, p.jumlah_award_miles AS jumlah FROM member_award_miles_package mp JOIN award_miles_package p ON mp.id_award_miles_package = p.id WHERE mp.email_member = %s
+            ) t
+            ORDER BY timestamp DESC LIMIT 5
+        """, [email, email, email, email])
+        cols = [col[0] for col in cursor.description]
+        context['transaksi'] = [dict(zip(cols, row)) for row in cursor.fetchall()]
+
+    return render(request, 'member/dashboard.html', context)
 
 @login_required_member
 def redeem_view(request):
     email_member = request.session.get('email')
     active_tab   = request.GET.get('tab', 'katalog')
  
-    # ── POST: proses redeem ──────────────────────────────────
     if request.method == 'POST':
         kode = request.POST.get('kode_hadiah', '').strip()
         try:
-            with transaction.atomic():
-                with connection.cursor() as cur:
-                    cur.execute(
-                        "SELECT kode_hadiah, nama, miles FROM hadiah WHERE kode_hadiah = %s",
-                        [kode]
-                    )
-                    hadiah_row = cur.fetchone()
+            # Langsung tembak INSERT. Kalau saldo kurang/expired, 
+            # Trigger Supabase akan menggagalkan dan melempar Exception!
+            with connection.cursor() as cur:
+                now = timezone.now()
+                cur.execute(
+                    "INSERT INTO redeem (email_member, kode_hadiah, timestamp) VALUES (%s, %s, %s)",
+                    [email_member, kode, now]
+                )
+                
+                # Jika lolos Trigger, ambil data untuk pesan sukses
+                cur.execute("SELECT nama, miles FROM hadiah WHERE kode_hadiah = %s", [kode])
+                nama_hadiah, miles_dibutuhkan = cur.fetchone()
+                
+                # Sinkronkan session dengan saldo terbaru dari DB
+                cur.execute("SELECT award_miles FROM member WHERE email = %s", [email_member])
+                request.session['award_miles'] = cur.fetchone()[0]
  
-                    if not hadiah_row:
-                        messages.error(request, 'Hadiah tidak ditemukan.')
-                        return redirect('member:redeem')
- 
-                    kode_hadiah, nama_hadiah, miles_dibutuhkan = hadiah_row
- 
-                    cur.execute(
-                        "SELECT award_miles FROM member WHERE email = %s FOR UPDATE",
-                        [email_member]
-                    )
-                    member_row  = cur.fetchone()
-                    award_miles = member_row[0] if member_row else 0
- 
-                    if award_miles < miles_dibutuhkan:
-                        messages.error(
-                            request,
-                            f'Award miles tidak mencukupi. Dibutuhkan {miles_dibutuhkan:,} miles, '
-                            f'saldo Anda {award_miles:,} miles.'
-                        )
-                        return redirect('member:redeem')
- 
-                    now = timezone.now()
-                    cur.execute(
-                        "INSERT INTO redeem (email_member, kode_hadiah, timestamp) VALUES (%s, %s, %s)",
-                        [email_member, kode_hadiah, now]
-                    )
-                    cur.execute(
-                        "UPDATE member SET award_miles = award_miles - %s WHERE email = %s",
-                        [miles_dibutuhkan, email_member]
-                    )
-                    saldo_baru = award_miles - miles_dibutuhkan
- 
-            # Sync ke session supaya request.session.award_miles di template keisi
-            request.session['award_miles'] = saldo_baru
-            messages.success(request, f'Berhasil redeem "{nama_hadiah}" dengan {miles_dibutuhkan:,} miles.')
+            messages.success(request, f'SUKSES: Redeem hadiah "{nama_hadiah}" berhasil. Award miles Anda berkurang {miles_dibutuhkan} miles.')
  
         except Exception as e:
-            messages.error(request, 'Terjadi kesalahan saat redeem hadiah.')
+            # Menangkap RAISE EXCEPTION 'ERROR: ...' dari Trigger Supabase
+            pesan_error = str(e).split('\n')[0].strip()
+            if "ERROR:" in pesan_error:
+                messages.error(request, pesan_error)
+            else:
+                messages.error(request, f'Gagal redeem: {pesan_error}')
  
         return redirect('member:redeem')
  
-    # ── GET ──────────────────────────────────────────────────
-    # Katalog hadiah — semua hadiah tanpa filter expired
+    # (Biarkan kueri GET untuk katalog dan riwayat di bawah ini tetap sama persis seperti sebelumnya)
     with connection.cursor() as cur:
         cur.execute("""
-            SELECT
-                h.kode_hadiah,
-                h.nama,
-                h.miles,
-                h.deskripsi,
-                h.valid_start_date,
-                h.program_end,
-                COALESCE(m.nama_mitra, 'Mitra') AS nama_penyedia
-            FROM hadiah h
-            LEFT JOIN mitra m ON m.id_penyedia = h.id_penyedia
-            ORDER BY h.miles ASC
+            SELECT h.kode_hadiah, h.nama, h.miles, h.deskripsi, h.valid_start_date, h.program_end,
+                   COALESCE(m.nama_mitra, 'Mitra') AS nama_penyedia
+            FROM hadiah h LEFT JOIN mitra m ON m.id_penyedia = h.id_penyedia ORDER BY h.miles ASC
         """)
-        cols        = [c.name for c in cur.description]
-        # alias kode → h.kode, penyedia → h.penyedia sesuai template
-        hadiah_list = [
-            {
-                **dict(zip(cols, row)),
-                'kode'    : row[0],
-                'penyedia': row[6],
-            }
-            for row in cur.fetchall()
-        ]
+        cols = [c.name for c in cur.description]
+        hadiah_list = [{**dict(zip(cols, row)), 'kode': row[0], 'penyedia': row[6]} for row in cur.fetchall()]
  
-    # Riwayat redeem member ini
     with connection.cursor() as cur:
         cur.execute("""
-            SELECT
-                r.timestamp,
-                h.nama   AS nama_hadiah,
-                h.miles  AS miles_digunakan,
-                r.kode_hadiah
-            FROM redeem r
-            JOIN hadiah h ON h.kode_hadiah = r.kode_hadiah
-            WHERE r.email_member = %s
-            ORDER BY r.timestamp DESC
+            SELECT r.timestamp, h.nama AS nama_hadiah, h.miles AS miles_digunakan, r.kode_hadiah
+            FROM redeem r JOIN hadiah h ON h.kode_hadiah = r.kode_hadiah
+            WHERE r.email_member = %s ORDER BY r.timestamp DESC
         """, [email_member])
-        cols           = [c.name for c in cur.description]
-        # alias hadiah → r.hadiah, miles → r.miles sesuai template
-        riwayat_redeem = [
-            {
-                **dict(zip(cols, row)),
-                'hadiah': row[1],
-                'miles' : row[2],
-            }
-            for row in cur.fetchall()
-        ]
+        cols = [c.name for c in cur.description]
+        riwayat_redeem = [{**dict(zip(cols, row)), 'hadiah': row[1], 'miles': row[2]} for row in cur.fetchall()]
  
-    # Ambil saldo terkini dari DB lalu sync ke session
     with connection.cursor() as cur:
         cur.execute("SELECT award_miles FROM member WHERE email = %s", [email_member])
-        row         = cur.fetchone()
+        row = cur.fetchone()
         award_miles = row[0] if row else 0
  
-    request.session['award_miles'] = award_miles  # supaya request.session.award_miles muncul di template
+    request.session['award_miles'] = award_miles 
  
     return render(request, 'member/redeem.html', {
-        'hadiah_list'   : hadiah_list,
-        'riwayat_redeem': riwayat_redeem,
-        'active_tab'    : active_tab,
-        'award_miles'   : award_miles,
+        'hadiah_list': hadiah_list, 'riwayat_redeem': riwayat_redeem, 'active_tab': active_tab, 'award_miles': award_miles,
     })
- 
 
-
-@login_required_member
-def dashboard(request):
-    # Mengambil data dinamis dari session user yang sedang login
-    # Gunakan .get() dan nilai default agar tidak error jika session kosong
-    context = {
-        'nama': request.session.get('nama', 'Nama Belum Diatur'),
-        'email': request.session.get('email', 'Email Belum Diatur'),
-        'telepon': request.session.get('mobile_number', '-'), 
-        'kewarganegaraan': request.session.get('kewarganegaraan', 'Indonesia'),
-        'tanggal_lahir': request.session.get('tanggal_lahir', '-'),
-
-        # Stat Cards
-        'nomor_member': request.session.get('nomor_member', 'Belum Ada'),
-        'tier': request.session.get('tier', 'BLUE'),
-        'total_miles': request.session.get('total_miles', 0),
-        'award_miles': request.session.get('award_miles', 0),
-
-        # latest transaction (dummy) -> To Be Updated
-        'transaksi': [
-            {'tipe': 'Transfer', 'tanggal': '2026-04-26 10:31:20', 'miles': -1000},
-            {'tipe': 'Redeem',   'tanggal': '2026-04-26 10:31:20', 'miles': -10000},
-            {'tipe': 'Package',  'tanggal': '2026-04-26 10:31:20', 'miles': +16000},
-            {'tipe': 'Package',  'tanggal': '2026-04-26 10:31:20', 'miles': +16000},
-            {'tipe': 'Redeem',   'tanggal': '2026-04-26 10:31:20', 'miles': -10000},
-        ],
-    }
-    return render(request, 'member/dashboard.html', context)
 
 @login_required_member
 def package_view(request):
     email_member = request.session.get('email')
 
-    # ── POST: beli package ──────────────────────────────────
     if request.method == 'POST':
         pkg_id = request.POST.get('package_id', '').strip()
 
         try:
-            with transaction.atomic():
-                with connection.cursor() as cur:
-                    cur.execute("""
-                        SELECT id, harga_paket, jumlah_award_miles
-                        FROM award_miles_package
-                        WHERE id = %s
-                    """, [pkg_id])
+            with connection.cursor() as cur:
+                now = timezone.now()
+                # Langsung INSERT. Trigger Supabase akan otomatis menambah saldo
+                cur.execute("""
+                    INSERT INTO member_award_miles_package (
+                        id_award_miles_package, email_member, timestamp
+                    ) VALUES (%s, %s, %s)
+                """, [pkg_id, email_member, now])
 
-                    row = cur.fetchone()
+                # Ambil jumlah miles dari paket untuk pesan sukses
+                cur.execute("SELECT jumlah_award_miles FROM award_miles_package WHERE id = %s", [pkg_id])
+                jumlah_award_miles = cur.fetchone()[0]
 
-                    if not row:
-                        messages.error(request, 'Paket tidak ditemukan.')
-                        return redirect('member:package')
+                # Update session
+                cur.execute("SELECT award_miles, total_miles FROM member WHERE email = %s", [email_member])
+                row = cur.fetchone()
+                request.session['award_miles'] = row[0]
+                request.session['total_miles'] = row[1]
 
-                    pkg_id_db, harga_paket, jumlah_award_miles = row
-                    now = timezone.now()
-
-                    cur.execute("""
-                        INSERT INTO member_award_miles_package (
-                            id_award_miles_package, email_member, timestamp
-                        ) VALUES (%s, %s, %s)
-                    """, [pkg_id_db, email_member, now])
-
-                    cur.execute("""
-                        UPDATE member SET award_miles = award_miles + %s
-                        WHERE email = %s
-                    """, [jumlah_award_miles, email_member])
-
-                    cur.execute(
-                        "SELECT award_miles FROM member WHERE email = %s",
-                        [email_member]
-                    )
-                    saldo_baru = cur.fetchone()[0]
-
-            request.session['award_miles'] = saldo_baru
             messages.success(
                 request,
-                f'Berhasil membeli {jumlah_award_miles:,} Award Miles '
-                f'seharga Rp {int(harga_paket):,}.'.replace(',', '.')
+                f'SUKSES: Pembelian package berhasil. Award miles dan total miles Anda bertambah {jumlah_award_miles} miles.'
             )
 
         except Exception as e:
-            print("ERROR PACKAGE:", e)  # lihat di terminal
-            messages.error(request, 'Terjadi kesalahan saat membeli package.')
+            messages.error(request, f'Terjadi kesalahan saat membeli package: {str(e)}')
 
         return redirect('member:package')
 
-    # ── GET: daftar package ─────────────────────────────────
+    # (Biarkan kueri GET daftar package dan riwayat tetap sama)
     with connection.cursor() as cur:
-        cur.execute("""
-            SELECT id, harga_paket, jumlah_award_miles
-            FROM award_miles_package
-            ORDER BY jumlah_award_miles ASC
-        """)
-        packages = [
-            {
-                'id'   : row[0],
-                'miles': row[2],                                    # alias → pkg.miles di template
-                'harga': f"Rp {int(row[1]):,}".replace(',', '.'),  # alias → pkg.harga di template
-            }
-            for row in cur.fetchall()
-        ]
+        cur.execute("SELECT id, harga_paket, jumlah_award_miles FROM award_miles_package ORDER BY jumlah_award_miles ASC")
+        packages = [{'id': row[0], 'miles': row[2], 'harga': f"Rp {int(row[1]):,}".replace(',', '.')} for row in cur.fetchall()]
 
-    # Riwayat pembelian
     with connection.cursor() as cur:
         cur.execute("""
             SELECT mp.timestamp, p.id, p.jumlah_award_miles, p.harga_paket
-            FROM member_award_miles_package mp
-            JOIN award_miles_package p ON p.id = mp.id_award_miles_package
-            WHERE mp.email_member = %s
-            ORDER BY mp.timestamp DESC
+            FROM member_award_miles_package mp JOIN award_miles_package p ON p.id = mp.id_award_miles_package
+            WHERE mp.email_member = %s ORDER BY mp.timestamp DESC
         """, [email_member])
-        cols            = [c.name for c in cur.description]
+        cols = [c.name for c in cur.description]
         riwayat_package = [dict(zip(cols, row)) for row in cur.fetchall()]
-
-    # Saldo terkini
+ 
     with connection.cursor() as cur:
-        cur.execute("SELECT award_miles FROM member WHERE email = %s", [email_member])
-        row         = cur.fetchone()
+        cur.execute("SELECT award_miles, total_miles FROM member WHERE email = %s", [email_member])
+        row = cur.fetchone()
         award_miles = row[0] if row else 0
+        total_miles = row[1] if row else 0
 
     request.session['award_miles'] = award_miles
+    request.session['total_miles'] = total_miles
 
     return render(request, 'member/package.html', {
-        'packages'       : packages,
-        'riwayat_package': riwayat_package,
-        'award_miles'    : award_miles,
-    })
+        'packages': packages, 'riwayat_package': riwayat_package, 'award_miles': award_miles,
+    }) 
 
 @login_required_member
 def info_tier_view(request):
@@ -517,10 +411,10 @@ def info_tier_view(request):
         rows  = cur.fetchall()
         tiers = [
             {
-                'id'           : r[0],            # → t.id di template
-                'nama'         : r[1],            # → t.nama di template
-                'min_frekuensi': r[2],            # → t.min_frekuensi di template
-                'min_miles'    : r[3],            # → t.min_miles di template
+                'id'           : r[0],
+                'nama'         : r[1],
+                'min_frekuensi': r[2],
+                'min_miles'    : r[3],
                 'keuntungan'   : _keuntungan_tier(r[1]),
             }
             for r in rows
@@ -549,8 +443,8 @@ def info_tier_view(request):
  
     return render(request, 'member/info_tier.html', {
         'tiers'       : tiers,
-        'current_tier': current_tier_obj['nama'],  # template: {% if t.nama == current_tier %}
-        'next_tier'   : next_tier,                 # template: next_tier.nama, next_tier.min_miles
+        'current_tier': current_tier_obj['nama'],
+        'next_tier'   : next_tier,
         'total_miles' : total_miles,
         'progress_pct': progress_pct,
     })
@@ -565,4 +459,3 @@ def _keuntungan_tier(nama_tier: str) -> list:
                      'Extra bagasi 20kg', 'Dedicated hotline'],
     }
     return mapping.get(nama_tier, [])
- 

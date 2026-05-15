@@ -5,6 +5,24 @@
 {% block title %}Redeem Hadiah{% endblock %}
 
 {% block content %}
+
+{% if messages %}
+    <div class="fixed bottom-5 right-5 z-[100] space-y-3">
+        {% for message in messages %}
+        <div class="px-6 py-4 rounded-xl shadow-2xl text-white font-bold flex items-center animate-bounce
+            {% if message.tags == 'success' %} bg-[#38ac38] {% else %} bg-[#d13232] {% endif %}">
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    <script>
+        setTimeout(() => {
+            const msgs = document.querySelectorAll('.animate-bounce');
+            msgs.forEach(m => m.style.display = 'none');
+        }, 5000);
+    </script>
+ {% endif %}
+    
 <!-- Container Utama: mx-auto berfungsi untuk mengetengahkan konten -->
 <div class="max-w-7xl mx-auto px-6 md:px-10 pt-10 pb-20">
     
@@ -12,7 +30,7 @@
     <div class="mb-10 text-center sm:text-left">
         <h1 class="text-4xl font-marcellus text-[#0A1D37] tracking-wider">Redeem Hadiah</h1>
         <p class="text-gray-500 font-inter-semibold mt-2 text-xs uppercase tracking-[0.2em]">
-            Award Miles tersedia: <span class="text-gray-900 ml-1">{{ request.session.award_miles|default:"100,000"|intcomma }}</span>
+            Award Miles tersedia: <span class="text-gray-900 ml-1">{{ request.session.award_miles|intcomma }}</span>
         </p>
     </div>
 
@@ -45,6 +63,10 @@
                 <span class="px-4 py-1.5 rounded-lg text-white text-[10px] font-inter-semibold mb-4 uppercase tracking-widest bg-[#A69C6D]">
                     {{ h.kode }} - {{ h.penyedia }}
                 </span>
+                <p class="text-gray-400 text-[11px] mb-8">
+                    Berlaku: <span class="text-gray-600 font-semibold">{{ h.valid_start_date }}</span> 
+                    s/d <span class="text-gray-600 font-semibold">{{ h.program_end }}</span>
+                </p>
                 <h3 class="text-xl font-marcellus text-[#0A1D37] mb-1">{{ h.nama }}</h3>
                 <p class="text-[#0A1D37] font-inter-semibold text-sm mb-2">{{ h.miles|intcomma }} miles</p>
                 <p class="text-gray-400 text-xs font-medium mb-8 italic leading-relaxed">{{ h.deskripsi }}</p>

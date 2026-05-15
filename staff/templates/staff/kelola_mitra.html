@@ -135,20 +135,26 @@
 
 {% block extra_js %}
 <script>
-    function openEditModal(kode, nama, penyedia, miles, deskripsi, start, end) {
-        document.getElementById('edit_kode').value = kode;
-        document.getElementById('edit_nama').value = nama;
-        document.getElementById('edit_penyedia').value = penyedia;
-        document.getElementById('edit_miles').value = miles;
-        document.getElementById('edit_deskripsi').value = deskripsi;
-        document.getElementById('edit_start').value = start;
-        document.getElementById('edit_end').value = end;
-        toggleModal('modalEditHadiah');
+    function toggleModal(modalID) {
+        const modal = document.getElementById(modalID);
+        if (modal.classList.contains('hidden')) {
+            modal.classList.remove('hidden');
+        } else {
+            modal.classList.add('hidden');
+        }
     }
 
-    function openDeleteModal(kode) {
-        document.getElementById('delete_kode').value = kode;
-        toggleModal('modalHapusHadiah');
+    function openEditModal(email, nama, tanggal) {
+        document.getElementById('edit_email').value = email;
+        document.getElementById('edit_nama').value = nama;
+        document.getElementById('edit_tanggal').value = tanggal;
+        toggleModal('modalEditMitra');
+    }
+
+    function openDeleteModal(email, id_penyedia) {
+        document.getElementById('delete_email').value = email;
+        document.getElementById('delete_id').value = id_penyedia;
+        toggleModal('modalHapusMitra');
     }
 </script>
 {% endblock extra_js %}
