@@ -135,6 +135,15 @@
 
 {% block extra_js %}
 <script>
+    function toggleModal(modalID) {
+        const modal = document.getElementById(modalID);
+        if (modal.classList.contains('hidden')) {
+            modal.classList.remove('hidden');
+        } else {
+            modal.classList.add('hidden');
+        }
+    }
+
     function openEditModal(email, nama, tanggal) {
         document.getElementById('edit_email').value = email;
         document.getElementById('edit_nama').value = nama;
