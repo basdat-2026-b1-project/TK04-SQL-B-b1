@@ -125,6 +125,7 @@ def register_view(request):
             messages.error(request, 'Email tidak boleh kosong.')
             return render(request, 'accounts/register.html', {'maskapai_choices': MASKAPAI_CHOICES})
 
+        # ambil data form
         hashed_password = make_password(password)
         salutation      = request.POST.get('salutation', '')
         # menggunakan nama_depan & nama_belakang sesuai dengan HTML form kamu
@@ -135,9 +136,11 @@ def register_view(request):
         tanggal_lahir   = request.POST.get('tanggal_lahir') or None
         kewarganegaraan = request.POST.get('kewarganegaraan') or None
 
+        # insertion and auto increment
+        # insertion and auto increment
         try:
             with connection.cursor() as cur:
-                # insert ke pengguna
+                # insert ke pengguna 
                 cur.execute("""
                     INSERT INTO pengguna (
                         email, password, salutation, first_mid_name, last_name,
@@ -146,8 +149,8 @@ def register_view(request):
                 """, [email, hashed_password, salutation, first_mid_name, last_name,
                       country_code, mobile_number, tanggal_lahir, kewarganegaraan])
 
+                # insert ke tabel spesifik berdasarkan rolenya
                 if role == 'member':
-                    # generate nomor member dengan MAX
                     cur.execute("""
                         SELECT MAX(CAST(SUBSTRING(nomor_member FROM 2) AS INTEGER)) 
                         FROM member
@@ -164,7 +167,6 @@ def register_view(request):
                 elif role == 'staf':
                     kode_maskapai = request.POST.get('kode_maskapai', '')
                     
-                    # generate ID staf dengan MAX
                     cur.execute("""
                         SELECT MAX(CAST(SUBSTRING(id_staf FROM 2) AS INTEGER)) 
                         FROM staf
@@ -178,21 +180,23 @@ def register_view(request):
                         VALUES (%s, %s, %s)
                     """, [email, id_staf, kode_maskapai])
 
+            # Jika sukses tanpa terkena trigger
             messages.success(request, 'Akun berhasil dibuat! Silakan login.')
             return redirect('accounts:login')
 
         except Exception as e:
+            # Tangkap lemparan error dari Trigger
             pesan_error = str(e).split('\n')[0].strip()
             
             if "ERROR: Email" in pesan_error:
+                # Tampilkan pesan sama persis dengan yang dari database
                 messages.error(request, pesan_error)
             else:
                 messages.error(request, f"Terjadi kesalahan: {pesan_error}")
                 
             return render(request, 'accounts/register.html', {'maskapai_choices': MASKAPAI_CHOICES})
-
+        
     return render(request, 'accounts/register.html', {'maskapai_choices': MASKAPAI_CHOICES})
-
 
 def logout_view(request):
     request.session.flush()

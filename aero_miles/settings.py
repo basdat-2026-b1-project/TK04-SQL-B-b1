@@ -87,9 +87,7 @@ WSGI_APPLICATION = 'aero_miles.wsgi.application'
 # ── Database (Supabase via DATABASE_URL) ─────────────────────────────────────
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.getenv('DATABASE_URL'),
-        conn_max_age=600,
-        ssl_require=True
+        default=os.environ.get('DATABASE_URL')
     )
 }
 

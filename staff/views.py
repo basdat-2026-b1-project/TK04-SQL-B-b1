@@ -6,7 +6,7 @@ from django.db import connection
 from django.contrib.auth.hashers import make_password
 from datetime import date
 from django.core.paginator import Paginator
-
+from django.db import transaction
 from member.views import login_required_member
 
 def login_required_staf(view_func):
@@ -206,19 +206,7 @@ def dashboard(request):
 
     return render(request, 'staff/dashboard.html', context)
 
-def _apply_filters(query: str, params: list, mulai: str, akhir: str, email: str):
-    """Tambahkan klausa WHERE umum (tanggal & email) ke query."""
-    if email:
-        query  += " AND r.email_member = %s" if 'r.email_member' in query else " AND mp.email_member = %s"
-        params += [email]
-    if mulai:
-        query  += " AND r.timestamp >= %s" if 'r.timestamp' in query else " AND mp.timestamp >= %s"
-        params += [mulai]
-    if akhir:
-        query  += " AND r.timestamp <= %s" if 'r.timestamp' in query else " AND mp.timestamp <= %s"
-        params += [akhir + ' 23:59:59']
-    return query, params
-
+from django.db import connection
 
 @login_required_staf
 def kelola_klaim_view(request):
@@ -226,23 +214,58 @@ def kelola_klaim_view(request):
     filter_maskapai = request.GET.get('maskapai', 'Semua')
     email_staf = request.session.get('email')
 
+    # logic update status yang akan membuat trigger terexecute
     if request.method == 'POST':
         action = request.POST.get('action')
         klaim_id = request.POST.get('klaim_id')
-        
+
+        # tentukan status baru berdasarkan tombol yang ditekan
+        status_baru = 'Disetujui' if action == 'setujui' else 'Ditolak'
+
         try:
+            # Dihapus transaction.atomic()-nya agar Supabase langsung auto-commit
             with connection.cursor() as cursor:
                 if action == 'setujui':
-                    cursor.execute("UPDATE claim_missing_miles SET status_penerimaan = 'Disetujui', email_staf = %s WHERE id = %s", [email_staf, klaim_id])
-                    messages.success(request, f'Klaim {klaim_id} berhasil disetujui. Miles ditambahkan ke akun member.')
+                    # Explicit casting ::integer untuk mencegah id tidak terbaca
+                    cursor.execute("""
+                        UPDATE claim_missing_miles 
+                        SET status_penerimaan = 'Disetujui', email_staf = %s 
+                        WHERE id = %s::integer 
+                        RETURNING email_member, flight_number
+                    """, [email_staf, klaim_id])
+                    
+                    row = cursor.fetchone()
+                    if row:
+                        connection.commit()
+                        email_member, flight_number = row
+                        messages.success(request, f'SUKSES: Total miles Member "{email_member}" telah diperbarui. Miles ditambahkan: 1000 miles dari klaim penerbangan "{flight_number}".')
+                    else:
+                        messages.error(request, f"Gagal: Database menolak update. Klaim #{klaim_id} tidak ditemukan.")
                 elif action == 'tolak':
-                    cursor.execute("UPDATE claim_missing_miles SET status_penerimaan = 'Ditolak', email_staf = %s WHERE id = %s", [email_staf, klaim_id])
-                    messages.warning(request, f'Klaim {klaim_id} telah ditolak.')
+                    cursor.execute("""
+                        UPDATE claim_missing_miles 
+                        SET status_penerimaan = 'Ditolak', email_staf = %s 
+                        WHERE id = %s::integer
+                    """, [email_staf, klaim_id])
+                    
+                    if cursor.rowcount > 0:
+                        messages.success(request, f'SUKSES: Klaim #{klaim_id} telah ditolak.')
+                    else:
+                        messages.error(request, f"Gagal: Database menolak update. Klaim #{klaim_id} tidak ditemukan.")
+                        
         except Exception as e:
-            messages.error(request, f'Gagal memproses klaim: {str(e)}')
+            # Menangkap error trigger asli dari PostgreSQL
+            pesan_error = str(e).split('\n')[0].strip()
+            if "SUKSES:" in pesan_error:
+                messages.success(request, pesan_error)
+            elif "ERROR:" in pesan_error:
+                messages.error(request, pesan_error)
+            else:
+                messages.error(request, f'Gagal memproses klaim: {pesan_error}')
             
         return redirect('staff:kelola_klaim')
 
+    # Bagian bawah ini untuk menampilkan data ke tabel
     with connection.cursor() as cursor:
         query = """
             SELECT 
@@ -264,16 +287,16 @@ def kelola_klaim_view(request):
             
         query += " ORDER BY c.timestamp DESC"
         cursor.execute(query, params)
-        cols = [col[0] for col in cursor.description]
-        klaim_list = [dict(zip(cols, row)) for row in cursor.fetchall()]
+        columns = [col[0] for col in cursor.description]
+        # ubah hasil query menjadi list of dictionary agar mudah dibaca template html
+        klaim_list = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
     return render(request, 'staff/kelola_klaim.html', {
         'klaim_list': klaim_list,
         'filter_status': filter_status,
         'filter_maskapai': filter_maskapai,
-        'maskapai_list': ['GA', 'QG', 'JT', 'SQ', 'MH'],
+        'maskapai_list': ['GA', 'QG', 'JT', 'SQ', 'MH'], 
     })
-
 @login_required_staf
 def kelola_hadiah_view(request):
     if request.method == 'POST':
@@ -283,28 +306,36 @@ def kelola_hadiah_view(request):
         if action == 'tambah':
             nama = request.POST.get('nama_reward')
             miles = request.POST.get('miles')
-            deskripsi = request.POST.get('deskripsi')
+            deskripsi = request.POST.get('deskripsi', '')
             start = request.POST.get('valid_start')
             end = request.POST.get('program_end')
             penyedia_id = request.POST.get('penyedia_name')
             
             try:
                 with connection.cursor() as cursor:
-                    cursor.execute("SELECT COUNT(*) FROM hadiah")
-                    new_kode = f"RWD-{cursor.fetchone()[0] + 1:03d}"
+                    # cari angka ID terbesar (MAX), bukan di-COUNT, agar anti bentrok
+                    cursor.execute("SELECT MAX(CAST(SUBSTRING(kode_hadiah FROM 5) AS INTEGER)) FROM hadiah")
+                    max_id = cursor.fetchone()[0]
+                    max_id = max_id if max_id is not None else 0
+                    new_kode = f"RWD-{max_id + 1:03d}"
                     
                     cursor.execute("""
                         INSERT INTO hadiah (kode_hadiah, nama, miles, deskripsi, valid_start_date, program_end, id_penyedia)
                         VALUES (%s, %s, %s, %s, %s, %s, %s)
                     """, [new_kode, nama, miles, deskripsi, start, end, penyedia_id])
+                    
+                    # force commit ke Supabase
+                    connection.commit()
+                    
                 messages.success(request, f'Hadiah berhasil ditambah dengan kode {new_kode}.')
             except Exception as e:
-                messages.error(request, 'Gagal menambah hadiah karena format input tidak valid atau ada data yang kosong.')
+                # PERBAIKAN 3: Munculkan pesan error ASLI dari database agar kita tahu salahnya di mana
+                messages.error(request, f'Gagal menambah hadiah: {str(e)}')
 
         elif action == 'edit':
             nama = request.POST.get('nama_reward')
             miles = request.POST.get('miles')
-            deskripsi = request.POST.get('deskripsi')
+            deskripsi = request.POST.get('deskripsi', '')
             start = request.POST.get('valid_start')
             end = request.POST.get('program_end')
             penyedia_id = request.POST.get('penyedia_name')
@@ -316,14 +347,16 @@ def kelola_hadiah_view(request):
                         SET nama=%s, miles=%s, deskripsi=%s, valid_start_date=%s, program_end=%s, id_penyedia=%s
                         WHERE kode_hadiah=%s
                     """, [nama, miles, deskripsi, start, end, penyedia_id, kode])
+                    connection.commit()
                 messages.success(request, 'Detail hadiah berhasil diperbarui.')
             except Exception as e:
-                messages.error(request, 'Gagal mengedit hadiah karena format input tidak valid atau penyedia tidak ditemukan.')
+                messages.error(request, f'Gagal mengedit hadiah: {str(e)}')
 
         elif action == 'hapus':
             try:
                 with connection.cursor() as cursor:
                     cursor.execute("DELETE FROM hadiah WHERE kode_hadiah=%s", [kode])
+                    connection.commit()
                 messages.success(request, 'Hadiah berhasil dihapus.')
             except Exception as e:
                 messages.error(request, f'Gagal menghapus hadiah: {str(e)}')
@@ -477,133 +510,92 @@ def laporan_view(request):
 
     transaksi = []
 
-    # ── Redeem ───────────────────────────────────────────────
     if filter_tipe in ('Semua', 'Redeem'):
         with connection.cursor() as cur:
             cur.execute("""
-                SELECT
-                    r.timestamp,
-                    p.first_mid_name || ' ' || p.last_name AS member,
-                    r.email_member                          AS email,
-                    'Redeem'                                AS tipe,
-                    -h.miles                                AS jumlah
-                FROM redeem r
-                JOIN hadiah h   ON h.kode_hadiah = r.kode_hadiah
-                JOIN pengguna p ON p.email = r.email_member
+                SELECT r.timestamp, p.first_mid_name || ' ' || p.last_name AS member, r.email_member AS email,
+                       'Redeem' AS tipe, -h.miles AS jumlah
+                FROM redeem r JOIN hadiah h ON h.kode_hadiah = r.kode_hadiah JOIN pengguna p ON p.email = r.email_member
                 ORDER BY r.timestamp DESC
             """)
             cols = [c.name for c in cur.description]
             transaksi += [dict(zip(cols, row)) for row in cur.fetchall()]
 
-    # ── Package ──────────────────────────────────────────────
     if filter_tipe in ('Semua', 'Package'):
         with connection.cursor() as cur:
             cur.execute("""
-                SELECT
-                    mp.timestamp,
-                    p.first_mid_name || ' ' || p.last_name AS member,
-                    mp.email_member                         AS email,
-                    'Package'                               AS tipe,
-                    ap.jumlah_award_miles                   AS jumlah
-                FROM member_award_miles_package mp
-                JOIN award_miles_package ap ON ap.id = mp.id_award_miles_package
-                JOIN pengguna p             ON p.email = mp.email_member
+                SELECT mp.timestamp, p.first_mid_name || ' ' || p.last_name AS member, mp.email_member AS email,
+                       'Package' AS tipe, ap.jumlah_award_miles AS jumlah
+                FROM member_award_miles_package mp JOIN award_miles_package ap ON ap.id = mp.id_award_miles_package JOIN pengguna p ON p.email = mp.email_member
                 ORDER BY mp.timestamp DESC
             """)
             cols = [c.name for c in cur.description]
             transaksi += [dict(zip(cols, row)) for row in cur.fetchall()]
 
-    # ── Transfer ─────────────────────────────────────────────
     if filter_tipe in ('Semua', 'Transfer'):
         with connection.cursor() as cur:
             cur.execute("""
-                SELECT
-                    t.timestamp,
-                    p.first_mid_name || ' ' || p.last_name AS member,
-                    t.email_member_1                        AS email,
-                    'Transfer'                              AS tipe,
-                    -t.jumlah                               AS jumlah
-                FROM transfer t
-                JOIN pengguna p ON p.email = t.email_member_1
+                SELECT t.timestamp, p.first_mid_name || ' ' || p.last_name AS member, t.email_member_1 AS email,
+                       'Transfer' AS tipe, -t.jumlah AS jumlah
+                FROM transfer t JOIN pengguna p ON p.email = t.email_member_1
                 ORDER BY t.timestamp DESC
             """)
             cols = [c.name for c in cur.description]
             transaksi += [dict(zip(cols, row)) for row in cur.fetchall()]
 
-    # ── Klaim ────────────────────────────────────────────────
     if filter_tipe in ('Semua', 'Klaim'):
         with connection.cursor() as cur:
             cur.execute("""
-                SELECT
-                    c.timestamp,
-                    p.first_mid_name || ' ' || p.last_name AS member,
-                    c.email_member                          AS email,
-                    'Klaim'                                 AS tipe,
-                    0                                       AS jumlah
-                FROM claim_missing_miles c
-                JOIN pengguna p ON p.email = c.email_member
+                SELECT c.timestamp, p.first_mid_name || ' ' || p.last_name AS member, c.email_member AS email,
+                       'Klaim' AS tipe, 0 AS jumlah
+                FROM claim_missing_miles c JOIN pengguna p ON p.email = c.email_member
                 ORDER BY c.timestamp DESC
             """)
             cols = [c.name for c in cur.description]
             transaksi += [dict(zip(cols, row)) for row in cur.fetchall()]
 
-    # Urutkan semua dari terbaru
     transaksi.sort(key=lambda x: x['timestamp'], reverse=True)
 
-    # ── Stat cards ───────────────────────────────────────────
-    # Total miles beredar = sum award_miles semua member
     with connection.cursor() as cur:
         cur.execute("SELECT COALESCE(SUM(award_miles), 0) FROM member")
         total_miles_beredar = cur.fetchone()[0]
 
-    # Total redeem bulan ini (dalam miles)
     today = date.today()
     with connection.cursor() as cur:
         cur.execute("""
-            SELECT COALESCE(SUM(h.miles), 0)
-            FROM redeem r
-            JOIN hadiah h ON h.kode_hadiah = r.kode_hadiah
-            WHERE EXTRACT(MONTH FROM r.timestamp) = %s
-              AND EXTRACT(YEAR  FROM r.timestamp) = %s
+            SELECT COALESCE(SUM(h.miles), 0) FROM redeem r JOIN hadiah h ON h.kode_hadiah = r.kode_hadiah
+            WHERE EXTRACT(MONTH FROM r.timestamp) = %s AND EXTRACT(YEAR FROM r.timestamp) = %s
         """, [today.month, today.year])
         total_redeem_bulan_ini = cur.fetchone()[0]
 
-    # Total klaim disetujui
     with connection.cursor() as cur:
-        cur.execute(
-            "SELECT COUNT(*) FROM claim_missing_miles WHERE status_penerimaan = 'Disetujui'"
-        )
+        cur.execute("SELECT COUNT(*) FROM claim_missing_miles WHERE status_penerimaan = 'Disetujui'")
         total_klaim_disetujui = cur.fetchone()[0]
 
+    # MENGEMBALIKAN FUNGSI STORED PROCEDURE TOP 5 MEMBER
     with connection.cursor() as cur:
-        cur.execute("""
-            SELECT
-                p.first_mid_name || ' ' || p.last_name AS member,
-                m.total_miles,
-                (
-                    SELECT COUNT(*) FROM redeem r   WHERE r.email_member = m.email
-                ) +
-                (
-                    SELECT COUNT(*) FROM member_award_miles_package mp WHERE mp.email_member = m.email
-                ) +
-                (
-                    SELECT COUNT(*) FROM transfer t
-                    WHERE t.email_member_1 = m.email OR t.email_member_2 = m.email
-                ) AS jumlah_transaksi
-            FROM member m
-            JOIN pengguna p ON p.email = m.email
-            ORDER BY m.total_miles DESC
-            LIMIT 10
-        """)
-        cols        = [c.name for c in cur.description]
-        top_members = [dict(zip(cols, row)) for row in cur.fetchall()]
+        try:
+            cur.execute("SELECT * FROM get_top_5_members()")
+            cols = [c.name for c in cur.description]
+            raw_top_members = cur.fetchall()
+            
+            if raw_top_members:
+                top_members = [dict(zip(cols, row)) for row in raw_top_members]
+                pesan_prosedur = top_members[0].get('pesan_sukses', '')
+                if pesan_prosedur:
+                    messages.success(request, pesan_prosedur)
+            else:
+                top_members = []
+        except Exception as e:
+            top_members = []
+            messages.error(request, f'Gagal memuat Top 5 Member: {str(e)}')
 
     return render(request, 'staff/laporan.html', {
-        'transaksi'             : transaksi,
-        'filter_tipe'           : filter_tipe,
-        'active_tab'            : active_tab,
-        'total_miles_beredar'   : total_miles_beredar,
+        'transaksi': transaksi,
+        'filter_tipe': filter_tipe,
+        'active_tab': active_tab,
+        'total_miles_beredar': total_miles_beredar,
         'total_redeem_bulan_ini': total_redeem_bulan_ini,
-        'total_klaim_disetujui' : total_klaim_disetujui,
-        'top_members'           : top_members,
+        'total_klaim_disetujui': total_klaim_disetujui,
+        'top_members': top_members,
     })

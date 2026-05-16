@@ -55,6 +55,18 @@
                 <button type="button" id="btn-staf" onclick="switchRole('staf')" class="flex-1 py-2 text-sm font-medium rounded-md nav-tab-inactive transition">Staf</button>
             </div>
 
+            {% if messages %}
+                <div class="mb-6 space-y-2">
+                    {% for message in messages %}
+                        <div class="p-4 rounded-md text-sm font-semibold 
+                            {% if message.tags == 'error' %} bg-red-100 text-red-700 border border-red-200 
+                            {% else %} bg-green-100 text-green-700 border border-green-200 {% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
             <form method="POST" id="registerForm" onsubmit="return validateForm()" class="space-y-5">
                 {% csrf_token %}
                 <input type="hidden" id="roleInput" name="role" value="member">
