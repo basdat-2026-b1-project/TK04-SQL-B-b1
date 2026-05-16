@@ -430,36 +430,6 @@ def redeem_view(request):
         'active_tab'    : active_tab,
         'award_miles'   : award_miles,
     })
- 
-
-
-@login_required_member
-def dashboard(request):
-    # Mengambil data dinamis dari session user yang sedang login
-    # Gunakan .get() dan nilai default agar tidak error jika session kosong
-    context = {
-        'nama': request.session.get('nama', 'Nama Belum Diatur'),
-        'email': request.session.get('email', 'Email Belum Diatur'),
-        'telepon': request.session.get('mobile_number', '-'), 
-        'kewarganegaraan': request.session.get('kewarganegaraan', 'Indonesia'),
-        'tanggal_lahir': request.session.get('tanggal_lahir', '-'),
-
-        # Stat Cards
-        'nomor_member': request.session.get('nomor_member', 'Belum Ada'),
-        'tier': request.session.get('tier', 'BLUE'),
-        'total_miles': request.session.get('total_miles', 0),
-        'award_miles': request.session.get('award_miles', 0),
-
-        # latest transaction (dummy) -> To Be Updated
-        'transaksi': [
-            {'tipe': 'Transfer', 'tanggal': '2026-04-26 10:31:20', 'miles': -1000},
-            {'tipe': 'Redeem',   'tanggal': '2026-04-26 10:31:20', 'miles': -10000},
-            {'tipe': 'Package',  'tanggal': '2026-04-26 10:31:20', 'miles': +16000},
-            {'tipe': 'Package',  'tanggal': '2026-04-26 10:31:20', 'miles': +16000},
-            {'tipe': 'Redeem',   'tanggal': '2026-04-26 10:31:20', 'miles': -10000},
-        ],
-    }
-    return render(request, 'member/dashboard.html', context)
 
 @login_required_member
 def package_view(request):
@@ -472,12 +442,12 @@ def package_view(request):
         try:
             with transaction.atomic():
                 with connection.cursor() as cur:
+                    # Ambil data package
                     cur.execute("""
                         SELECT id, harga_paket, jumlah_award_miles
                         FROM award_miles_package
                         WHERE id = %s
                     """, [pkg_id])
-
                     row = cur.fetchone()
 
                     if not row:
@@ -487,27 +457,71 @@ def package_view(request):
                     pkg_id_db, harga_paket, jumlah_award_miles = row
                     now = timezone.now()
 
+                    # Insert transaksi
                     cur.execute("""
                         INSERT INTO member_award_miles_package (
                             id_award_miles_package, email_member, timestamp
                         ) VALUES (%s, %s, %s)
                     """, [pkg_id_db, email_member, now])
 
+                    # Update award_miles + total_miles
+                    cur.execute("""
+                        UPDATE member
+                        SET award_miles = award_miles + %s,
+                            total_miles = total_miles + %s
+                        WHERE email = %s
+                    """, [jumlah_award_miles, jumlah_award_miles, email_member])
+
+                    # Ambil saldo + tier terbaru
                     cur.execute(
-                        "SELECT award_miles FROM member WHERE email = %s",
+                        "SELECT award_miles, total_miles, id_tier FROM member WHERE email = %s",
                         [email_member]
                     )
-                    saldo_baru = cur.fetchone()[0]
+                    member_row      = cur.fetchone()
+                    award_miles     = member_row[0]
+                    total_miles     = member_row[1]
+                    current_id_tier = member_row[2]
 
-            request.session['award_miles'] = saldo_baru
+                    # Ambil semua tier
+                    cur.execute(
+                        "SELECT id_tier, nama, minimal_tier_miles FROM tier ORDER BY minimal_tier_miles ASC"
+                    )
+                    tiers = cur.fetchall()  # [(id_tier, nama, min_miles), ...]
+
+                    # Hitung tier yang seharusnya berdasarkan total_miles
+                    correct_tier = tiers[0]
+                    for t in tiers:
+                        if total_miles >= t[2]:
+                            correct_tier = t
+
+                    # Cek apakah perlu upgrade tier
+                    if correct_tier[0] != current_id_tier:
+                        old_tier_nama = next(
+                            (t[1] for t in tiers if t[0] == current_id_tier),
+                            current_id_tier
+                        )
+                        cur.execute(
+                            "UPDATE member SET id_tier = %s WHERE email = %s",
+                            [correct_tier[0], email_member]
+                        )
+                        messages.success(
+                            request,
+                            f'Selamat! Tier kamu naik dari "{old_tier_nama}" '
+                            f'menjadi "{correct_tier[1]}" berdasarkan total miles yang dimiliki.'
+                        )
+
+            # Sync session
+            request.session['award_miles'] = int(award_miles)
+            request.session['total_miles'] = int(total_miles)
+
             messages.success(
                 request,
-                f'Berhasil membeli {jumlah_award_miles:,} Award Miles '
+                f'Berhasil membeli {int(jumlah_award_miles):,} Award Miles '
                 f'seharga Rp {int(harga_paket):,}.'.replace(',', '.')
             )
 
         except Exception as e:
-            print("ERROR PACKAGE:", e)  # lihat di terminal
+            print("ERROR PACKAGE:", e)
             messages.error(request, 'Terjadi kesalahan saat membeli package.')
 
         return redirect('member:package')
@@ -522,8 +536,8 @@ def package_view(request):
         packages = [
             {
                 'id'   : row[0],
-                'miles': row[2],                                    # alias → pkg.miles di template
-                'harga': f"Rp {int(row[1]):,}".replace(',', '.'),  # alias → pkg.harga di template
+                'miles': row[2],
+                'harga': f"Rp {int(row[1]):,}".replace(',', '.'),
             }
             for row in cur.fetchall()
         ]
@@ -541,15 +555,14 @@ def package_view(request):
         riwayat_package = [dict(zip(cols, row)) for row in cur.fetchall()]
 
     # Saldo terkini
- 
     with connection.cursor() as cur:
         cur.execute("SELECT award_miles, total_miles FROM member WHERE email = %s", [email_member])
         row         = cur.fetchone()
         award_miles = row[0] if row else 0
         total_miles = row[1] if row else 0
 
-    request.session['award_miles'] = award_miles
-    request.session['total_miles'] = total_miles
+    request.session['award_miles'] = int(award_miles)
+    request.session['total_miles'] = int(total_miles)
 
     return render(request, 'member/package.html', {
         'packages'       : packages,
@@ -557,11 +570,11 @@ def package_view(request):
         'award_miles'    : award_miles,
     })
 
-
 @login_required_member
 def info_tier_view(request):
     email_member = request.session.get('email')
  
+    # ── 1. Ambil semua tier ───────────────────────────────────────────────────
     with connection.cursor() as cur:
         cur.execute(
             "SELECT id_tier, nama, minimal_frekuensi_terbang, minimal_tier_miles "
@@ -570,15 +583,16 @@ def info_tier_view(request):
         rows  = cur.fetchall()
         tiers = [
             {
-                'id'           : r[0],            # → t.id di template
-                'nama'         : r[1],            # → t.nama di template
-                'min_frekuensi': r[2],            # → t.min_frekuensi di template
-                'min_miles'    : r[3],            # → t.min_miles di template
+                'id'           : r[0],
+                'nama'         : r[1],
+                'min_frekuensi': r[2],
+                'min_miles'    : r[3],
                 'keuntungan'   : _keuntungan_tier(r[1]),
             }
             for r in rows
         ]
  
+    # ── 2. Ambil data member ──────────────────────────────────────────────────
     with connection.cursor() as cur:
         cur.execute(
             "SELECT id_tier, total_miles FROM member WHERE email = %s",
@@ -588,6 +602,39 @@ def info_tier_view(request):
         current_id_tier = row[0] if row else 'T01'
         total_miles     = row[1] if row else 0
  
+    # ── 3. Hitung tier yang seharusnya berdasarkan total_miles ────────────────
+    # (urutan tiers sudah ASC by min_miles)
+    correct_tier = tiers[0]  # default ke tier terendah
+    for t in tiers:
+        if total_miles >= t['min_miles']:
+            correct_tier = t
+ 
+    # ── 4. Cek apakah perlu upgrade ───────────────────────────────────────────
+    if correct_tier['id'] != current_id_tier:
+        # Ambil nama tier lama sebelum di-update
+        old_tier_nama = next(
+            (t['nama'] for t in tiers if t['id'] == current_id_tier),
+            current_id_tier
+        )
+ 
+        # Update tier di database
+        with connection.cursor() as cur:
+            cur.execute(
+                "UPDATE member SET id_tier = %s WHERE email = %s",
+                [correct_tier['id'], email_member]
+            )
+ 
+        # Kirim toast sukses
+        messages.success(
+            request,
+            f'Tier Member "{email_member}" telah diperbarui dari '
+            f'"{old_tier_nama}" menjadi "{correct_tier["nama"]}" '
+            f'berdasarkan total miles yang dimiliki.'
+        )
+ 
+        current_id_tier = correct_tier['id']
+ 
+    # ── 5. Hitung progress ke tier berikutnya ─────────────────────────────────
     tier_ids         = [t['id'] for t in tiers]
     current_idx      = tier_ids.index(current_id_tier) if current_id_tier in tier_ids else 0
     current_tier_obj = tiers[current_idx]
@@ -602,8 +649,8 @@ def info_tier_view(request):
  
     return render(request, 'member/info_tier.html', {
         'tiers'       : tiers,
-        'current_tier': current_tier_obj['nama'],  # template: {% if t.nama == current_tier %}
-        'next_tier'   : next_tier,                 # template: next_tier.nama, next_tier.min_miles
+        'current_tier': current_tier_obj['nama'],
+        'next_tier'   : next_tier,
         'total_miles' : total_miles,
         'progress_pct': progress_pct,
     })
@@ -618,4 +665,3 @@ def _keuntungan_tier(nama_tier: str) -> list:
                      'Extra bagasi 20kg', 'Dedicated hotline'],
     }
     return mapping.get(nama_tier, [])
- 

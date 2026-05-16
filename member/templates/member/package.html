@@ -47,14 +47,23 @@
         {% endfor %}
     </div>
 
-</div> <div id="modalBeli" class="fixed inset-0 bg-gray-900/60 z-[9999] hidden flex items-center justify-center p-4">
+</div>
+
+<!-- Modal Konfirmasi Beli -->
+<div id="modalBeli"
+     class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[9999] hidden items-center justify-center p-4"
+     onclick="if(event.target===this) tutupModalBeli()">
     <div class="bg-white rounded-[40px] p-12 max-w-lg w-full shadow-2xl relative font-inter">
         <button onclick="tutupModalBeli()" class="absolute top-8 right-8 text-gray-400 hover:text-gray-600 transition-colors">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M6 18L18 6M6 6l12 12"></path></svg>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                <path d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
         </button>
 
         <h2 class="text-3xl font-marcellus text-[#0A1D37] mb-4">Konfirmasi Pembelian</h2>
-        <p class="text-gray-500 text-sm mb-10 font-medium leading-relaxed">Anda akan melakukan pembelian paket miles dengan detail sebagai berikut:</p>
+        <p class="text-gray-500 text-sm mb-10 font-medium leading-relaxed">
+            Anda akan melakukan pembelian paket miles dengan detail sebagai berikut:
+        </p>
 
         <div class="space-y-5 mb-12 bg-gray-50 p-6 rounded-[24px]">
             <div class="flex justify-between items-center">
@@ -63,41 +72,59 @@
             </div>
             <div class="flex justify-between items-center border-t border-gray-200 pt-5">
                 <span class="text-xs font-inter-semibold text-gray-400 uppercase tracking-widest">Total Harga</span>
-                <span id="modal-harga" class="text-lg font-inter-semibold text-gray-900">Rp 150,000</span>
+                <span id="modal-harga" class="text-lg font-inter-semibold text-gray-900">Rp 150.000</span>
             </div>
         </div>
 
-        <form method="POST" action="">
+        <form method="POST" id="formBeli">
             {% csrf_token %}
             <input type="hidden" name="package_id" id="input_package_id">
             <div class="flex flex-col gap-3">
-                <button type="submit" class="w-full py-4 rounded-2xl bg-[#0A1D37] text-white font-inter-semibold text-xs hover:bg-black transition-all shadow-lg uppercase tracking-widest">
-                    Konfirmasi & Bayar
+                <button type="submit" id="btn-submit"
+                    class="w-full py-4 rounded-2xl bg-[#0A1D37] text-white font-inter-semibold text-xs hover:bg-black transition-all shadow-lg uppercase tracking-widest">
+                    Konfirmasi &amp; Bayar
                 </button>
-                <button type="button" onclick="tutupModalBeli()" class="w-full py-4 rounded-2xl border border-gray-200 text-gray-500 font-inter-semibold text-xs hover:bg-gray-50 transition-all uppercase tracking-widest">
+                <button type="button" onclick="tutupModalBeli()"
+                    class="w-full py-4 rounded-2xl border border-gray-200 text-gray-500 font-inter-semibold text-xs hover:bg-gray-50 transition-all uppercase tracking-widest">
                     Batal
                 </button>
             </div>
         </form>
     </div>
 </div>
+
 {% endblock content %}
 
 {% block extra_js %}
 <script>
     function bukaModalBeli(id, miles, harga) {
         document.getElementById('input_package_id').value = id;
-        document.getElementById('modal-miles').innerText = `+${miles}`;
-        document.getElementById('modal-harga').innerText = harga;
-        document.getElementById('modalBeli').classList.remove('hidden');
-        document.getElementById('modalBeli').classList.add('flex'); // Pastikan flex aktif saat muncul
-        document.body.style.overflow = 'hidden'; 
+        document.getElementById('modal-miles').innerText  = `+${miles}`;
+        document.getElementById('modal-harga').innerText  = harga;
+
+        // Reset tombol submit kalau sebelumnya pernah disabled
+        const btn = document.getElementById('btn-submit');
+        btn.disabled    = false;
+        btn.textContent = 'Konfirmasi & Bayar';
+
+        const modal = document.getElementById('modalBeli');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
     }
 
     function tutupModalBeli() {
-        document.getElementById('modalBeli').classList.add('hidden');
-        document.getElementById('modalBeli').classList.remove('flex');
+        const modal = document.getElementById('modalBeli');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
         document.body.style.overflow = 'auto';
     }
+
+    // Cegah double-submit
+    document.getElementById('formBeli').addEventListener('submit', function () {
+        const btn     = document.getElementById('btn-submit');
+        btn.disabled    = true;
+        btn.textContent = 'Memproses...';
+    });
 </script>
 {% endblock extra_js %}
