@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.humanize.templatetags.humanize import intcomma
@@ -18,70 +19,79 @@ def login_required_member(view_func):
 
 @login_required_member
 def identitas_view(request):
+    email = request.session.get('email')
+    
     if request.method == 'POST':
         action = request.POST.get('action')
 
         if action == 'tambah':
             nomor = request.POST.get('nomor')
-
-            sudah_ada = any(i['nomor'] == nomor for i in DUMMY_IDENTITAS)
-            if sudah_ada:
-                messages.error(request, 'Nomor dokumen sudah terdaftar.')
-            else:
-                DUMMY_IDENTITAS.append({
-                    'nomor': nomor,
-                    'jenis': request.POST.get('jenis'),
-                    'negara': request.POST.get('negara'),
-                    'tanggal_terbit': request.POST.get('tanggal_terbit'),
-                    'tanggal_habis': request.POST.get('tanggal_habis'),
-                    'status': 'Aktif',
-                })
-                messages.success(request, 'Identitas berhasil ditambahkan.')
+            jenis = request.POST.get('jenis')
+            negara = request.POST.get('negara')
+            tanggal_terbit = request.POST.get('tanggal_terbit')
+            tanggal_habis = request.POST.get('tanggal_habis')
+            
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT 1 FROM identitas WHERE nomor = %s", [nomor])
+                    if cursor.fetchone():
+                        messages.error(request, 'Nomor dokumen sudah terdaftar.')
+                        return redirect('member:identitas')
+                    cursor.execute("""
+                        INSERT INTO identitas (nomor, email_member, tanggal_habis, tanggal_terbit, negara_penerbit, jenis)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, [nomor, email, tanggal_habis, tanggal_terbit, negara, jenis])
+                    messages.success(request, 'Identitas berhasil ditambahkan.')
+            except Exception as e:
+                messages.error(request, f'Gagal menambah identitas: {str(e)}')
 
         elif action == 'edit':
             nomor = request.POST.get('nomor')
+            jenis = request.POST.get('jenis')
+            negara = request.POST.get('negara')
+            tanggal_terbit = request.POST.get('tanggal_terbit')
+            tanggal_habis = request.POST.get('tanggal_habis')
 
-            for identitas in DUMMY_IDENTITAS:
-                if identitas['nomor'] == nomor:
-                    identitas['jenis'] = request.POST.get('jenis')
-                    identitas['negara'] = request.POST.get('negara')
-                    identitas['tanggal_terbit'] = request.POST.get('tanggal_terbit')
-                    identitas['tanggal_habis'] = request.POST.get('tanggal_habis')
-                    identitas['status'] = request.POST.get('status', 'Aktif')
-                    break
-
-            messages.success(request, 'Identitas berhasil diperbarui.')
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        UPDATE identitas
+                        SET jenis=%s, negara_penerbit=%s, tanggal_terbit=%s, tanggal_habis=%s
+                        WHERE nomor=%s AND email_member=%s
+                    """, [jenis, negara, tanggal_terbit, tanggal_habis, nomor, email])
+                messages.success(request, 'Identitas berhasil diperbarui.')
+            except Exception as e:
+                messages.error(request, f'Gagal mengedit identitas: {str(e)}')
 
         elif action == 'hapus':
             nomor = request.POST.get('nomor')
-
-            for identitas in DUMMY_IDENTITAS:
-                if identitas['nomor'] == nomor:
-                    DUMMY_IDENTITAS.remove(identitas)
-                    break
-
-            messages.success(request, 'Identitas berhasil dihapus.')
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute("DELETE FROM identitas WHERE nomor=%s AND email_member=%s", [nomor, email])
+                messages.success(request, 'Identitas berhasil dihapus.')
+            except Exception as e:
+                messages.error(request, f'Gagal menghapus identitas: {str(e)}')
 
         return redirect('member:identitas')
 
-    today = date.today()
-
-    for identitas in DUMMY_IDENTITAS:
-        tanggal_habis = date.fromisoformat(identitas['tanggal_habis'])
-
-        if today > tanggal_habis:
-            identitas['status'] = 'Kedaluwarsa'
-        else:
-            identitas['status'] = 'Aktif'
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT nomor, jenis, negara_penerbit AS negara, tanggal_terbit, tanggal_habis,
+            CASE WHEN tanggal_habis >= CURRENT_DATE THEN 'Aktif' ELSE 'Kedaluwarsa' END AS status
+            FROM identitas
+            WHERE email_member = %s
+        """, [email])
+        cols = [col[0] for col in cursor.description]
+        identitas_list = [dict(zip(cols, row)) for row in cursor.fetchall()]
 
     return render(request, 'member/identitas.html', {
-        'identitas_list': DUMMY_IDENTITAS,
+        'identitas_list': identitas_list,
     })
-
 
 @login_required_member
 def claim_list(request):
     filter_status = request.GET.get('status', 'Semua')
+    email = request.session.get('email')
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -115,40 +125,81 @@ def claim_list(request):
             return redirect('member:claim_list')
         
         elif action == 'edit':
+            klaim_id = request.POST.get('klaim_id')
             status_klaim = request.POST.get('status_saat_ini') 
             if status_klaim == 'Menunggu':
-                messages.success(request, 'Klaim berhasil diperbarui.')
+                maskapai = request.POST.get('maskapai')
+                kelas = request.POST.get('kelas')
+                asal = request.POST.get('asal')
+                tujuan = request.POST.get('tujuan')
+                tanggal = request.POST.get('tanggal')
+                flight_number = request.POST.get('flight_number')
+                nomor_tiket = request.POST.get('nomor_tiket')
+                pnr = request.POST.get('pnr')
+                try:
+                    with connection.cursor() as cursor:
+                        cursor.execute("""
+                            UPDATE claim_missing_miles
+                            SET maskapai=%s, bandara_asal=%s, bandara_tujuan=%s, tanggal_penerbangan=%s, flight_number=%s, nomor_tiket=%s, kelas_kabin=%s, pnr=%s
+                            WHERE id=%s AND email_member=%s
+                        """, [maskapai, asal, tujuan, tanggal, flight_number, nomor_tiket, kelas, pnr, klaim_id, email])
+                    messages.success(request, 'Klaim berhasil diperbarui.')
+                except Exception as e:
+                    messages.error(request, f'Gagal memperbarui klaim: {str(e)}')
             else:
                 messages.error(request, 'Klaim yang sudah Disetujui atau Ditolak tidak dapat diubah.')
         
         elif action == 'batalkan':
             status_klaim = request.POST.get('status_saat_ini')
+            klaim_id = request.POST.get('klaim_id')
             if status_klaim == 'Menunggu':
-                messages.success(request, 'Klaim berhasil dibatalkan.')
+                try:
+                    with connection.cursor() as cursor:
+                        cursor.execute("DELETE FROM claim_missing_miles WHERE id=%s AND email_member=%s", [klaim_id, email])
+                    messages.success(request, 'Klaim berhasil dibatalkan.')
+                except Exception as e:
+                    messages.error(request, f'Gagal membatalkan klaim: {str(e)}')
             else:
                 messages.error(request, 'Klaim sudah diproses, tidak bisa dibatalkan.')
         
         return redirect('member:claim_list') 
 
-    # R - Riwayat Klaim
-    klaim_list_filtered = DUMMY_KLAIM
-    if filter_status != 'Semua':
-        klaim_list_filtered = [k for k in DUMMY_KLAIM if k['status'] == filter_status]
+    with connection.cursor() as cursor:
+        query = """
+            SELECT id, maskapai, bandara_asal AS asal, bandara_tujuan AS tujuan, bandara_asal || ' → ' || bandara_tujuan AS rute, 
+                   tanggal_penerbangan AS tanggal_raw,
+                   tanggal_penerbangan AS tanggal, flight_number AS flight, kelas_kabin AS kelas, nomor_tiket, pnr,
+                   status_penerimaan AS status, timestamp
+            FROM claim_missing_miles
+            WHERE email_member = %s
+        """
+        params = [email]
+        if filter_status != 'Semua':
+            query += " AND status_penerimaan = %s"
+            params.append(filter_status)
+        query += " ORDER BY timestamp DESC"
+        
+        cursor.execute(query, params)
+        cols = [col[0] for col in cursor.description]
+        klaim_list = [dict(zip(cols, row)) for row in cursor.fetchall()]
+        
+        cursor.execute("SELECT kode_maskapai, nama_maskapai FROM maskapai")
+        maskapai_list = cursor.fetchall()
+        
+        cursor.execute("SELECT iata_code, nama, kota, negara FROM bandara")
+        bandara_list = cursor.fetchall()
 
     return render(request, 'member/klaim.html', {
-        'klaim_list': klaim_list_filtered,
+        'klaim_list': klaim_list,
         'filter_status': filter_status,
         'status_choices': ['Semua', 'Menunggu', 'Disetujui', 'Ditolak'],
+        'maskapai_list': maskapai_list,
+        'bandara_list': bandara_list,
     })
-
 
 @login_required_member
 def transfer_view(request):
-    member_dummy = {
-        'nama_lengkap': 'Nisrina Alya',
-        'email_pengguna': 'nisrina.alya@ui.ac.id',
-        'award_miles': 32000
-    }
+    email = request.session.get('email')
 
     if request.method == 'POST':
         email_penerima = request.POST.get('email_penerima', '').strip()
@@ -161,12 +212,10 @@ def transfer_view(request):
             messages.error(request, 'Jumlah miles harus berupa angka.')
             return redirect('member:transfer')
 
-        if email_penerima == member_dummy['email_pengguna']:
+        if email_penerima == email:
             messages.error(request, 'Member tidak dapat mentransfer miles ke dirinya sendiri.')
         elif jumlah <= 0:
             messages.error(request, 'Jumlah miles harus lebih dari 0.')
-        elif jumlah > member_dummy['award_miles']:
-            messages.error(request, f'Award miles tidak mencukupi. Saldo Anda: {member_dummy["award_miles"]} miles.')
         else:
             try:
                 with connection.cursor() as cursor:
@@ -174,18 +223,18 @@ def transfer_view(request):
                     if not cursor.fetchone():
                         messages.error(request, 'Member penerima tidak ditemukan.')
                     else:
-                        # FIX: Cek berdasarkan award_miles, bukan total_miles
+                        # cek berdasarkan award_miles, bukan total_miles
                         cursor.execute("SELECT award_miles FROM member WHERE email=%s", [email])
                         saldo = cursor.fetchone()[0]
                         if jumlah > saldo:
-                            # FIX: Pesan Error sesuai requirements
+                            # pesan Error sesuai requirements
                             messages.error(request, f'ERROR: Saldo award miles tidak mencukupi. Saldo Anda saat ini: {saldo} miles, jumlah transfer: {jumlah} miles.')
                         else:
                             cursor.execute("""
                                 INSERT INTO transfer (email_member_1, email_member_2, jumlah, catatan)
                                 VALUES (%s, %s, %s, %s)
                             """, [email, email_penerima, jumlah, catatan])
-                            # FIX: Pesan Sukses sesuai requirements
+                            # pesan Sukses sesuai requirements
                             messages.success(request, f'SUKSES: Transfer {jumlah} miles dari "{email}" ke "{email_penerima}" berhasil dicatat.')
             except Exception as e:
                 pesan_error = str(e).split('\n')[0].strip()

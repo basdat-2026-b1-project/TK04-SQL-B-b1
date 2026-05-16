@@ -128,8 +128,9 @@ def register_view(request):
         # ambil data form
         hashed_password = make_password(password)
         salutation      = request.POST.get('salutation', '')
-        first_mid_name  = request.POST.get('first_mid_name', '')
-        last_name       = request.POST.get('last_name', '')
+        # menggunakan nama_depan & nama_belakang sesuai dengan HTML form kamu
+        first_mid_name  = request.POST.get('nama_depan', '')
+        last_name       = request.POST.get('nama_belakang', '')
         country_code    = request.POST.get('country_code') or None
         mobile_number   = request.POST.get('mobile_number') or None
         tanggal_lahir   = request.POST.get('tanggal_lahir') or None
@@ -318,9 +319,9 @@ def update_password(request):
     if request.method != 'POST':
         return redirect('accounts:profile')
 
-    email             = request.session.get('email')
-    password_lama     = request.POST.get('password_lama', '')
-    password_baru     = request.POST.get('password_baru', '')
+    email               = request.session.get('email')
+    password_lama       = request.POST.get('password_lama', '')
+    password_baru       = request.POST.get('password_baru', '')
     konfirmasi_password = request.POST.get('konfirmasi_password_baru', '')
 
     with connection.cursor() as cur:

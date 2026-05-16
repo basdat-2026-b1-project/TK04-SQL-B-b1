@@ -5,23 +5,6 @@
 
 {% block content %}
 
-{% if messages %}
-    <div class="fixed bottom-5 right-5 z-[100] space-y-3">
-        {% for message in messages %}
-        <div class="px-6 py-4 rounded-xl shadow-2xl text-white font-bold flex items-center animate-bounce
-            {% if message.tags == 'success' %} bg-[#38ac38] {% else %} bg-[#d13232] {% endif %}">
-            <span>{{ message }}</span>
-        </div>
-        {% endfor %}
-    </div>
-    <script>
-        setTimeout(() => {
-            const msgs = document.querySelectorAll('.animate-bounce');
-            msgs.forEach(m => m.style.display = 'none');
-        }, 5000);
-    </script>
-{% endif %}
-
 <div class="bg-white h-full font-sans p-10">
     <div class="max-w-[1240px] mx-auto">
         
