@@ -45,18 +45,21 @@ def login_view(request):
             messages.error(request, 'Email atau password salah. Silakan coba lagi.')
             return render(request, 'accounts/login.html')
 
-        # Set session dasar
-        request.session['email']          = db_email
-        request.session['salutation']     = salutation
-        request.session['first_mid_name'] = first_mid_name
-        request.session['last_name']      = last_name
-        request.session['nama']           = f"{first_mid_name} {last_name}"
-        request.session['country_code']   = country_code
-        request.session['mobile_number']  = mobile_number
-        request.session['tanggal_lahir']  = str(tanggal_lahir)
-        request.session['kewarganegaraan']= kewarganegaraan
+        def clean_val(val):
+            if val is None or str(val).strip().lower() in ('none', ''):
+                return ''
+            return str(val).strip()
 
-        # Cek apakah member
+        request.session['email']          = db_email
+        request.session['salutation']     = clean_val(salutation)
+        request.session['first_mid_name'] = clean_val(first_mid_name)
+        request.session['last_name']      = clean_val(last_name)
+        request.session['nama']           = f"{request.session['first_mid_name']} {request.session['last_name']}".strip()
+        request.session['country_code']   = clean_val(country_code)
+        request.session['mobile_number']  = clean_val(mobile_number)
+        request.session['tanggal_lahir']  = clean_val(tanggal_lahir)
+        request.session['kewarganegaraan']= clean_val(kewarganegaraan)
+
         with connection.cursor() as cur:
             cur.execute("""
                 SELECT m.nomor_member, m.tanggal_bergabung, m.id_tier,
@@ -79,7 +82,6 @@ def login_view(request):
             messages.success(request, f"Selamat datang, {salutation} {first_mid_name} {last_name}!")
             return redirect('/member/dashboard/')
 
-        # Cek apakah staf
         with connection.cursor() as cur:
             cur.execute("""
                 SELECT s.id_staf, s.kode_maskapai, mk.nama_maskapai
@@ -224,20 +226,25 @@ def profile_view(request):
 
     role = request.session.get('role')
 
+    def clean_val(val):
+        if val is None or str(val).strip().lower() in ('none', ''):
+            return ''
+        return str(val).strip()
+
     context = {
-        'email'          : request.session.get('email', ''),
+        'email'          : clean_val(request.session.get('email')),
         'role'           : role,
-        'salutation'     : request.session.get('salutation', ''),
-        'first_mid_name' : request.session.get('first_mid_name', ''),
-        'last_name'      : request.session.get('last_name', ''),
-        'country_code'   : request.session.get('country_code', ''),
-        'mobile_number'  : request.session.get('mobile_number', ''),
-        'tanggal_lahir'  : request.session.get('tanggal_lahir', ''),
-        'kewarganegaraan': request.session.get('kewarganegaraan', ''),
-        'nomor_member'   : request.session.get('nomor_member', ''),
-        'tanggal_bergabung': request.session.get('tanggal_bergabung', ''),
-        'id_staf'        : request.session.get('id_staf', ''),
-        'kode_maskapai'  : request.session.get('kode_maskapai', ''),
+        'salutation'     : clean_val(request.session.get('salutation')),
+        'first_mid_name' : clean_val(request.session.get('first_mid_name')),
+        'last_name'      : clean_val(request.session.get('last_name')),
+        'country_code'   : clean_val(request.session.get('country_code')),
+        'mobile_number'  : clean_val(request.session.get('mobile_number')),
+        'tanggal_lahir'  : clean_val(request.session.get('tanggal_lahir')),
+        'kewarganegaraan': clean_val(request.session.get('kewarganegaraan')),
+        'nomor_member'   : clean_val(request.session.get('nomor_member')),
+        'tanggal_bergabung': clean_val(request.session.get('tanggal_bergabung')),
+        'id_staf'        : clean_val(request.session.get('id_staf')),
+        'kode_maskapai'  : clean_val(request.session.get('kode_maskapai')),
         'maskapai_choices': [
             ('GA', 'Garuda Indonesia'),
             ('QG', 'Citilink'),
@@ -254,52 +261,46 @@ def profile_view(request):
 
     return redirect('accounts:dashboard')
 
-
 def update_profile(request):
-    if not request.session.get('role'):
-        return redirect('accounts:login')
-
     if request.method == 'POST':
-        email           = request.session.get('email')
-        salutation      = request.POST.get('salutation', '')
-        first_mid_name  = request.POST.get('first_mid_name', '')
-        last_name       = request.POST.get('last_name', '')
-        kewarganegaraan = request.POST.get('kewarganegaraan', '')
-        country_code    = request.POST.get('country_code', '')
-        mobile_number   = request.POST.get('mobile_number', '')
-        tanggal_lahir   = request.POST.get('tanggal_lahir', '')
+        email = request.session.get('email')
+        salutation = request.POST.get('salutation', '').strip()
+        first_mid_name = request.POST.get('first_mid_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        kewarganegaraan = request.POST.get('kewarganegaraan', '').strip()
+        country_code = request.POST.get('country_code', '').strip()
+        mobile_number = request.POST.get('mobile_number', '').strip()
+        tanggal_lahir = request.POST.get('tanggal_lahir', '').strip()
 
-        with connection.cursor() as cur:
-            cur.execute("""
-                UPDATE pengguna
-                SET salutation = %s, first_mid_name = %s, last_name = %s,
-                    kewarganegaraan = %s, country_code = %s,
-                    mobile_number = %s, tanggal_lahir = %s
-                WHERE email = %s
-            """, [salutation, first_mid_name, last_name, kewarganegaraan,
-                  country_code, mobile_number, tanggal_lahir, email])
+        if not all([salutation, first_mid_name, last_name, kewarganegaraan, country_code, mobile_number, tanggal_lahir]):
+            messages.error(request, 'Gagal: Semua field profil wajib diisi!')
+            return redirect('accounts:profile')
 
-            if request.session.get('role') == 'staf':
-                kode_maskapai = request.POST.get('kode_maskapai', '')
-                cur.execute(
-                    "UPDATE staf SET kode_maskapai = %s WHERE email = %s",
-                    [kode_maskapai, email]
-                )
-                request.session['kode_maskapai'] = kode_maskapai
+        try:
+            with connection.cursor() as cur:
+                cur.execute("""
+                    UPDATE pengguna
+                    SET salutation = %s, first_mid_name = %s, last_name = %s,
+                        kewarganegaraan = %s, country_code = %s,
+                        mobile_number = %s, tanggal_lahir = %s
+                    WHERE email = %s
+                """, [salutation, first_mid_name, last_name, kewarganegaraan, country_code, mobile_number, tanggal_lahir, email])
+            
+            request.session['salutation'] = salutation
+            request.session['first_mid_name'] = first_mid_name
+            request.session['last_name'] = last_name
+            request.session['nama'] = f"{first_mid_name} {last_name}"
+            request.session['kewarganegaraan'] = kewarganegaraan
+            request.session['country_code'] = country_code
+            request.session['mobile_number'] = mobile_number
+            request.session['tanggal_lahir'] = str(tanggal_lahir)
+            
+            messages.success(request, 'Profil berhasil diperbarui.')
+            
+        except Exception as e:
+            messages.error(request, f'Gagal memperbarui profil: {str(e)}')
 
-        # Sync session
-        request.session['salutation']      = salutation
-        request.session['first_mid_name']  = first_mid_name
-        request.session['last_name']       = last_name
-        request.session['nama']            = f"{first_mid_name} {last_name}"
-        request.session['kewarganegaraan'] = kewarganegaraan
-        request.session['country_code']    = country_code
-        request.session['mobile_number']   = mobile_number
-        request.session['tanggal_lahir']   = tanggal_lahir
-
-        messages.success(request, 'Profil berhasil diperbarui.')
-
-    return redirect('accounts:profile')
+        return redirect('accounts:profile')
 
 
 def update_profile_photo(request):

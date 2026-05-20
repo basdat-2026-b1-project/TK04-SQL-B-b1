@@ -1,3 +1,4 @@
+from datetime import datetime
 from django.db import transaction
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -32,6 +33,17 @@ def identitas_view(request):
             tanggal_habis = request.POST.get('tanggal_habis')
             
             try:
+                tgl_terbit_obj = datetime.strptime(tanggal_terbit, '%Y-%m-%d').date()
+                tgl_habis_obj = datetime.strptime(tanggal_habis, '%Y-%m-%d').date()
+                
+                if tgl_terbit_obj >= tgl_habis_obj:
+                    messages.error(request, 'Tanggal habis (end date) harus lebih dari tanggal terbit (start date).')
+                    return redirect('member:identitas')
+            except ValueError:
+                messages.error(request, 'Format tanggal tidak valid.')
+                return redirect('member:identitas')
+
+            try:
                 with connection.cursor() as cursor:
                     cursor.execute("SELECT 1 FROM identitas WHERE nomor = %s", [nomor])
                     if cursor.fetchone():
@@ -51,6 +63,17 @@ def identitas_view(request):
             negara = request.POST.get('negara')
             tanggal_terbit = request.POST.get('tanggal_terbit')
             tanggal_habis = request.POST.get('tanggal_habis')
+
+            try:
+                tgl_terbit_obj = datetime.strptime(tanggal_terbit, '%Y-%m-%d').date()
+                tgl_habis_obj = datetime.strptime(tanggal_habis, '%Y-%m-%d').date()
+                
+                if tgl_terbit_obj >= tgl_habis_obj:
+                    messages.error(request, 'Tanggal habis (end date) harus lebih dari tanggal terbit (start date).')
+                    return redirect('member:identitas')
+            except ValueError:
+                messages.error(request, 'Format tanggal tidak valid.')
+                return redirect('member:identitas')
 
             try:
                 with connection.cursor() as cursor:
@@ -116,7 +139,6 @@ def claim_list(request):
                     
                 messages.success(request, 'Klaim berhasil diajukan!')
             except Exception as e:
-                # Modifikasi tangkapan pesan error jika trigger duplikat klaim berjalan
                 pesan_error = str(e).split('\n')[0].strip()
                 if "ERROR:" in pesan_error:
                     messages.error(request, pesan_error)
