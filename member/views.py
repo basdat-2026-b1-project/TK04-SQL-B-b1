@@ -415,12 +415,18 @@ def package_view(request):
         try:
             with transaction.atomic():
                 with connection.cursor() as cur:
+
+                    # Bersihkan notices lama
+                    if connection.connection:
+                        connection.connection.notices.clear()
+
                     # Ambil data package
                     cur.execute("""
                         SELECT id, harga_paket, jumlah_award_miles
                         FROM award_miles_package
                         WHERE id = %s
                     """, [pkg_id])
+
                     row = cur.fetchone()
 
                     if not row:
@@ -430,85 +436,86 @@ def package_view(request):
                     pkg_id_db, harga_paket, jumlah_award_miles = row
                     now = timezone.now()
 
-                    # Insert transaksi
+                    # Insert transaksi pembelian package
+                    # Trigger PostgreSQL otomatis update award_miles & total_miles
                     cur.execute("""
                         INSERT INTO member_award_miles_package (
-                            id_award_miles_package, email_member, timestamp
+                            id_award_miles_package,
+                            email_member,
+                            timestamp
                         ) VALUES (%s, %s, %s)
                     """, [pkg_id_db, email_member, now])
 
-                    # Update award_miles + total_miles
+                    # Ambil saldo terbaru hasil trigger
                     cur.execute("""
-                        UPDATE member
-                        SET award_miles = award_miles + %s,
-                            total_miles = total_miles + %s
+                        SELECT award_miles, total_miles
+                        FROM member
                         WHERE email = %s
-                    """, [jumlah_award_miles, jumlah_award_miles, email_member])
+                    """, [email_member])
 
-                    # Ambil saldo + tier terbaru
-                    cur.execute(
-                        "SELECT award_miles, total_miles, id_tier FROM member WHERE email = %s",
-                        [email_member]
-                    )
-                    member_row      = cur.fetchone()
-                    award_miles     = member_row[0]
-                    total_miles     = member_row[1]
-                    current_id_tier = member_row[2]
+                    member_row = cur.fetchone()
 
-                    # Ambil semua tier
-                    cur.execute(
-                        "SELECT id_tier, nama, minimal_tier_miles FROM tier ORDER BY minimal_tier_miles ASC"
-                    )
-                    tiers = cur.fetchall()  # [(id_tier, nama, min_miles), ...]
+                    award_miles = member_row[0]
+                    total_miles = member_row[1]
 
-                    # Hitung tier yang seharusnya berdasarkan total_miles
-                    correct_tier = tiers[0]
-                    for t in tiers:
-                        if total_miles >= t[2]:
-                            correct_tier = t
+                    # Ambil NOTICE dari trigger PostgreSQL
+                    notices = connection.connection.notices
 
-                    # Cek apakah perlu upgrade tier
-                    if correct_tier[0] != current_id_tier:
-                        old_tier_nama = next(
-                            (t[1] for t in tiers if t[0] == current_id_tier),
-                            current_id_tier
-                        )
-                        cur.execute(
-                            "UPDATE member SET id_tier = %s WHERE email = %s",
-                            [correct_tier[0], email_member]
-                        )
-                        messages.success(
-                            request,
-                            f'Selamat! Tier kamu naik dari "{old_tier_nama}" '
-                            f'menjadi "{correct_tier[1]}" berdasarkan total miles yang dimiliki.'
-                        )
+                    for notice in notices:
+                        if 'SUKSES:' in notice:
+                            clean_notice = (
+                                notice
+                                .replace('NOTICE:', '')
+                                .strip()
+                            )
+
+                            messages.success(
+                                request,
+                                clean_notice
+                            )
 
             # Sync session
             request.session['award_miles'] = int(award_miles)
             request.session['total_miles'] = int(total_miles)
 
+            # Message pembelian package
             messages.success(
                 request,
-                f'Berhasil membeli {int(jumlah_award_miles):,} Award Miles '
-                f'seharga Rp {int(harga_paket):,}.'.replace(',', '.')
+                f'Berhasil membeli '
+                f'{int(jumlah_award_miles):,} Award Miles '
+                f'seharga Rp {int(harga_paket):,}.'
+                .replace(',', '.')
             )
 
         except Exception as e:
             print("ERROR PACKAGE:", e)
-            messages.error(request, 'Terjadi kesalahan saat membeli package.')
+
+            pesan_error = str(e)
+
+            if "ERROR:" in pesan_error:
+                messages.error(request, pesan_error)
+            else:
+                messages.error(
+                    request,
+                    f'Terjadi kesalahan saat membeli package: {pesan_error}'
+                )
 
         return redirect('member:package')
 
-    # (Biarkan kueri GET daftar package dan riwayat tetap sama)
+    # =========================
+    # GET METHOD
+    # =========================
+
     with connection.cursor() as cur:
         cur.execute("""
             SELECT id, harga_paket, jumlah_award_miles
             FROM award_miles_package
             ORDER BY jumlah_award_miles ASC
         """)
+
         packages = [
             {
-                'id'   : row[0],
+                'id': row[0],
                 'miles': row[2],
                 'harga': f"Rp {int(row[1]):,}".replace(',', '.'),
             }
@@ -517,17 +524,35 @@ def package_view(request):
 
     with connection.cursor() as cur:
         cur.execute("""
-            SELECT mp.timestamp, p.id, p.jumlah_award_miles, p.harga_paket
-            FROM member_award_miles_package mp JOIN award_miles_package p ON p.id = mp.id_award_miles_package
-            WHERE mp.email_member = %s ORDER BY mp.timestamp DESC
+            SELECT
+                mp.timestamp,
+                p.id,
+                p.jumlah_award_miles,
+                p.harga_paket
+            FROM member_award_miles_package mp
+            JOIN award_miles_package p
+                ON p.id = mp.id_award_miles_package
+            WHERE mp.email_member = %s
+            ORDER BY mp.timestamp DESC
         """, [email_member])
-        cols = [c.name for c in cur.description]
-        riwayat_package = [dict(zip(cols, row)) for row in cur.fetchall()]
 
-    # Saldo terkini
+        cols = [c.name for c in cur.description]
+
+        riwayat_package = [
+            dict(zip(cols, row))
+            for row in cur.fetchall()
+        ]
+
+    # Saldo terbaru
     with connection.cursor() as cur:
-        cur.execute("SELECT award_miles, total_miles FROM member WHERE email = %s", [email_member])
+        cur.execute("""
+            SELECT award_miles, total_miles
+            FROM member
+            WHERE email = %s
+        """, [email_member])
+
         row = cur.fetchone()
+
         award_miles = row[0] if row else 0
         total_miles = row[1] if row else 0
 
@@ -535,8 +560,10 @@ def package_view(request):
     request.session['total_miles'] = int(total_miles)
 
     return render(request, 'member/package.html', {
-        'packages': packages, 'riwayat_package': riwayat_package, 'award_miles': award_miles,
-    }) 
+        'packages': packages,
+        'riwayat_package': riwayat_package,
+        'award_miles': award_miles,
+    })
 
 @login_required_member
 def info_tier_view(request):
