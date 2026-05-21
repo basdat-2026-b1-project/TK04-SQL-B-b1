@@ -20,7 +20,7 @@ SECRET_KEY = os.environ.get(
     'django-insecure-d%0xza6#h-b7)w3j1y4(j%nb9-g83on=1zm^#9$#$k-00*52e$'
 )
 
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+DEBUG = True
 
 ALLOWED_HOSTS = [
     'aeromiles-b1.up.railway.app', 
@@ -87,9 +87,7 @@ WSGI_APPLICATION = 'aero_miles.wsgi.application'
 # ── Database (Supabase via DATABASE_URL) ─────────────────────────────────────
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
-        conn_max_age=600,
-        ssl_require=not DEBUG,   # SSL wajib di production
+        default=os.environ.get('DATABASE_URL')
     )
 }
 
@@ -114,4 +112,4 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'

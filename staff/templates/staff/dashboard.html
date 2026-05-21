@@ -8,7 +8,7 @@
      style="background-image: linear-gradient(rgba(240, 244, 248, 0.4), rgba(240, 244, 248, 0.4)), url('{% static "img/image-2.png" %}');">
     <div class="max-w-6xl mx-auto relative z-10">
         
-        <h1 class="text-3xl font-bold text-gray-900 mb-8">Hello, {{ request.session.nama|default:"Nisrina Alya" }}</h1>
+        <h1 class="text-3xl font-bold text-gray-900 mb-8">Hello, {{ nama }}</h1>
 
         <div class="bg-white rounded-[24px] shadow-sm border border-gray-200 p-8 mb-8">
             <h2 class="text-lg font-bold text-gray-800 mb-6">Informasi Pribadi</h2>
@@ -16,23 +16,23 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
                 <div>
                     <p class="text-sm text-gray-500 mb-1">Nama Lengkap</p>
-                    <p class="font-medium text-gray-900">{{ request.session.nama|default:"Nisrina Alya" }}</p>
+                    <p class="font-medium text-gray-900">{{ nama }}</p>
                 </div>
                 <div>
                     <p class="text-sm text-gray-500 mb-1">Email</p>
-                    <p class="font-medium text-gray-900">{{ request.session.email|default:"nisrina.alya@ui.ac.id" }}</p>
+                    <p class="font-medium text-gray-900">{{ email }}</p>
                 </div>
                 <div>
                     <p class="text-sm text-gray-500 mb-1">Telepon</p>
-                    <p class="font-medium text-gray-900">+62-8137-0998-516</p>
+                    <p class="font-medium text-gray-900">{{ telepon }}</p>
                 </div>
                 <div>
                     <p class="text-sm text-gray-500 mb-1">Kewarganegaraan</p>
-                    <p class="font-medium text-gray-900">Indonesia</p>
+                    <p class="font-medium text-gray-900">{{ kewarganegaraan }}</p>
                 </div>
                 <div>
                     <p class="text-sm text-gray-500 mb-1">Tanggal Lahir</p>
-                    <p class="font-medium text-gray-900">19-09-2006</p>
+                    <p class="font-medium text-gray-900">{{ tanggal_lahir }}</p>
                 </div>
             </div>
         </div>
@@ -44,7 +44,7 @@
                     <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
                     <p class="text-xs text-gray-500">ID Staff</p>
                 </div>
-                <p class="text-xl font-bold text-gray-900">MOO01</p>
+                <p class="text-xl font-bold text-gray-900">{{ id_staf }}</p>
             </div>
 
             <div class="bg-white rounded-[20px] shadow-sm border border-gray-200 p-6 flex flex-col justify-center gap-3">
@@ -52,7 +52,7 @@
                     <svg class="w-6 h-6 text-gray-600 transform rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
                     <p class="text-xs text-gray-500">Maskapai</p>
                 </div>
-                <p class="text-xl font-bold text-gray-900">Etihad</p>
+                <p class="text-xl font-bold text-gray-900">{{ maskapai }}</p>
             </div>
 
             <div class="bg-white rounded-[20px] shadow-sm border border-gray-200 p-6 flex flex-col justify-center gap-3">
@@ -60,7 +60,7 @@
                     <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     <p class="text-xs text-gray-500">Klaim Menunggu</p>
                 </div>
-                <p class="text-xl font-bold text-gray-900">15</p>
+                <p class="text-xl font-bold text-gray-900">{{ klaim_menunggu }}</p>
             </div>
 
             <div class="bg-white rounded-[20px] shadow-sm border border-gray-200 p-6 flex flex-col justify-center gap-3">
@@ -68,7 +68,7 @@
                     <svg class="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     <p class="text-xs text-gray-500">Klaim Disetujui</p>
                 </div>
-                <p class="text-xl font-bold text-gray-900">10</p>
+                <p class="text-xl font-bold text-gray-900">{{ klaim_disetujui }}</p>
             </div>
 
             <div class="bg-white rounded-[20px] shadow-sm border border-gray-200 p-6 flex flex-col justify-center gap-3">
@@ -76,7 +76,7 @@
                     <svg class="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     <p class="text-xs text-gray-500">Klaim Ditolak</p>
                 </div>
-                <p class="text-xl font-bold text-gray-900">3</p>
+                <p class="text-xl font-bold text-gray-900">{{ klaim_ditolak }}</p>
             </div>
 
         </div>
