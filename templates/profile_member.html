@@ -45,7 +45,7 @@
 
                     <div class="md:col-span-2 max-w-2xl">
                         <label class="block mb-2 text-sm font-semibold text-gray-700 font-inter">Salutation</label>
-                        <select name="salutation"
+                        <select name="salutation" required
                             class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#1a2b49] font-inter text-gray-800 cursor-pointer">
                             <option value="">Pilih Salutation</option>
                             <option value="Mr." {% if salutation == "Mr." %}selected{% endif %}>Mr.</option>
@@ -57,19 +57,19 @@
 
                     <div>
                         <label class="block mb-2 text-sm font-semibold text-gray-700 font-inter">Nama Depan</label>
-                        <input type="text" name="first_mid_name" value="{{ first_mid_name }}" placeholder="Nisrina"
+                        <input type="text" name="first_mid_name" value="{{ first_mid_name }}" placeholder="Nisrina" required
                             class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#1a2b49] font-inter text-gray-800">
                     </div>
 
                     <div>
                         <label class="block mb-2 text-sm font-semibold text-gray-700 font-inter">Nama Belakang</label>
-                        <input type="text" name="last_name" value="{{ last_name }}" placeholder="Alya"
+                        <input type="text" name="last_name" value="{{ last_name }}" placeholder="Alya" required
                             class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#1a2b49] font-inter text-gray-800">
                     </div>
 
                     <div>
                         <label class="block mb-2 text-sm font-semibold text-gray-700 font-inter">Kewarganegaraan</label>
-                        <input type="text" name="kewarganegaraan" value="{{ kewarganegaraan }}" placeholder="Indonesia"
+                        <input type="text" name="kewarganegaraan" value="{{ kewarganegaraan }}" placeholder="Indonesia" required
                             class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#1a2b49] font-inter text-gray-800">
                     </div>
 
@@ -77,19 +77,19 @@
 
                     <div>
                         <label class="block mb-2 text-sm font-semibold text-gray-700 font-inter">Country Code</label>
-                        <input type="text" name="country_code" value="{{ country_code }}" placeholder="+62"
+                        <input type="text" name="country_code" value="{{ country_code }}" placeholder="+62" required
                             class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#1a2b49] font-inter text-gray-800">
                     </div>
 
                     <div>
                         <label class="block mb-2 text-sm font-semibold text-gray-700 font-inter">Nomor Telepon</label>
-                        <input type="text" name="mobile_number" value="{{ mobile_number }}" placeholder="81370998516"
+                        <input type="text" name="mobile_number" value="{{ mobile_number }}" placeholder="81370998516" required
                             class="w-full px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#1a2b49] font-inter text-gray-800">
                     </div>
 
                     <div>
                         <label class="block mb-2 text-sm font-semibold text-gray-700 font-inter">Tanggal Lahir</label>
-                        <input type="date" name="tanggal_lahir" value="{{ tanggal_lahir }}"
+                        <input type="date" name="tanggal_lahir" value="{{ tanggal_lahir }}" required
                             class="w-full md:w-auto px-4 py-3 border border-gray-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#1a2b49] font-inter text-gray-800">
                     </div>
                 </div>
@@ -104,4 +104,53 @@
         </div>
     </div>
 </section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form[action="/update-profile/"]');
+        if (!form) return;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (!submitBtn) return;
+        
+        const fields = [
+            form.querySelector('select[name="salutation"]'),
+            form.querySelector('input[name="first_mid_name"]'),
+            form.querySelector('input[name="last_name"]'),
+            form.querySelector('input[name="kewarganegaraan"]'),
+            form.querySelector('input[name="country_code"]'),
+            form.querySelector('input[name="mobile_number"]'),
+            form.querySelector('input[name="tanggal_lahir"]')
+        ];
+
+        function checkFormValidity() {
+            let allFilled = true;
+            fields.forEach(field => {
+                if (!field) return;
+                const val = field.value.trim();
+                if (val === "" || val.toLowerCase() === "none") {
+                    allFilled = false;
+                }
+            });
+
+            if (allFilled) {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed', 'opacity-60');
+                submitBtn.classList.add('bg-[#1a2b49]', 'text-white', 'hover:bg-[#121e33]', 'cursor-pointer');
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed', 'opacity-60');
+                submitBtn.classList.remove('bg-[#1a2b49]', 'text-white', 'hover:bg-[#121e33]', 'cursor-pointer');
+            }
+        }
+
+        fields.forEach(field => {
+            if (!field) return;
+            field.addEventListener('input', checkFormValidity);
+            field.addEventListener('change', checkFormValidity);
+        });
+
+        // Run immediately on page load
+        checkFormValidity();
+    });
+</script>
 {% endblock %}
