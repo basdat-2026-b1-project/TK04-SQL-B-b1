@@ -245,18 +245,16 @@ def transfer_view(request):
                     if not cursor.fetchone():
                         messages.error(request, 'Member penerima tidak ditemukan.')
                     else:
-                        # cek berdasarkan award_miles, bukan total_miles
                         cursor.execute("SELECT award_miles FROM member WHERE email=%s", [email])
                         saldo = cursor.fetchone()[0]
                         if jumlah > saldo:
-                            # pesan Error sesuai requirements
                             messages.error(request, f'ERROR: Saldo award miles tidak mencukupi. Saldo Anda saat ini: {saldo} miles, jumlah transfer: {jumlah} miles.')
                         else:
+                            now = timezone.now()
                             cursor.execute("""
-                                INSERT INTO transfer (email_member_1, email_member_2, jumlah, catatan)
-                                VALUES (%s, %s, %s, %s)
-                            """, [email, email_penerima, jumlah, catatan])
-                            # pesan Sukses sesuai requirements
+                                INSERT INTO transfer (email_member_1, email_member_2, jumlah, catatan, timestamp)
+                                VALUES (%s, %s, %s, %s, %s)
+                            """, (email, email_penerima, jumlah, catatan, now))
                             messages.success(request, f'SUKSES: Transfer {jumlah} miles dari "{email}" ke "{email_penerima}" berhasil dicatat.')
             except Exception as e:
                 pesan_error = str(e).split('\n')[0].strip()
@@ -264,7 +262,7 @@ def transfer_view(request):
                     messages.error(request, pesan_error)
                 else:
                     messages.error(request, f'Gagal melakukan transfer: {pesan_error}')
-        
+
         return redirect('member:transfer')
 
     with connection.cursor() as cursor:
@@ -275,13 +273,15 @@ def transfer_view(request):
         member_data = dict(zip(['nama_lengkap', 'email_pengguna', 'award_miles'], cursor.fetchone()))
 
         cursor.execute("""
-            SELECT timestamp, email_member_2 AS email, p.first_mid_name || ' ' || p.last_name AS member, -jumlah AS jumlah, catatan, 'Kirim' AS tipe
-            FROM transfer t JOIN pengguna p ON t.email_member_2 = p.email WHERE t.email_member_1 = %s
-            UNION ALL
-            SELECT timestamp, email_member_1 AS email, p.first_mid_name || ' ' || p.last_name AS member, jumlah AS jumlah, catatan, 'Terima' AS tipe
-            FROM transfer t JOIN pengguna p ON t.email_member_1 = p.email WHERE t.email_member_2 = %s
+            SELECT * FROM (
+                SELECT timestamp, email_member_2 AS email, p.first_mid_name || ' ' || p.last_name AS member, -jumlah AS jumlah, catatan, 'Kirim' AS tipe
+                FROM transfer t JOIN pengguna p ON t.email_member_2 = p.email WHERE t.email_member_1 = %s
+                UNION ALL
+                SELECT timestamp, email_member_1 AS email, p.first_mid_name || ' ' || p.last_name AS member, jumlah AS jumlah, catatan, 'Terima' AS tipe
+                FROM transfer t JOIN pengguna p ON t.email_member_1 = p.email WHERE t.email_member_2 = %s
+            ) sub
             ORDER BY timestamp DESC
-        """, [email, email])
+        """, (email, email))
         cols = [col[0] for col in cursor.description]
         transfer_list = [dict(zip(cols, row)) for row in cursor.fetchall()]
 
