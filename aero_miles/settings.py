@@ -20,21 +20,13 @@ SECRET_KEY = os.environ.get(
     'django-insecure-d%0xza6#h-b7)w3j1y4(j%nb9-g83on=1zm^#9$#$k-00*52e$'
 )
 
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = [
-    'aeromiles-b1.up.railway.app', 
-    'localhost', 
-    '127.0.0.1'
-]
-
-# Tambahkan domain Railway secara otomatis
-RAILWAY_PUBLIC_DOMAIN = os.environ.get('RAILWAY_PUBLIC_DOMAIN', '')
-if RAILWAY_PUBLIC_DOMAIN:
-    ALLOWED_HOSTS.append(RAILWAY_PUBLIC_DOMAIN)
+ALLOWED_HOSTS = ['*']
 
 CSRF_TRUSTED_ORIGINS = [
-    f'https://{RAILWAY_PUBLIC_DOMAIN}' if RAILWAY_PUBLIC_DOMAIN else 'http://localhost:8000'
+    'https://*.vercel.app',
+    'http://localhost:8000',
 ]
 
 
@@ -84,11 +76,16 @@ TEMPLATES = [
 WSGI_APPLICATION = 'aero_miles.wsgi.application'
 
 
-# ── Database (Supabase via DATABASE_URL) ─────────────────────────────────────
+# ── Database (Supabase) ───────────────────────────────────────────────────────
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL')
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'postgres'),
+        'USER': os.environ.get('DB_USER', 'postgres.nxhpnnhusuzcernjeebu'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'alyaaulyacathray'),
+        'HOST': os.environ.get('DB_HOST', 'aws-1-ap-northeast-1.pooler.supabase.com'),
+        'PORT': os.environ.get('DB_PORT', '6543'),
+    }
 }
 
 
